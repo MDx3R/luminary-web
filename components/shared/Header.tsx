@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -11,32 +10,56 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AuthDialog } from "@/components/auth/AuthDialog";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LogOutIcon, UserIcon } from "lucide-react";
 
+type AuthMode = "login" | "register";
+
 export function Header() {
   const router = useRouter();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authDefaultMode, setAuthDefaultMode] = useState<AuthMode>("login");
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const loadSession = useAuthStore((s) => s.loadSession);
 
   useEffect(() => {
-    loadSession()
-  }, [loadSession])
+    loadSession();
+  }, [loadSession]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const auth = new URLSearchParams(window.location.search).get("auth");
+    if (auth === "login" || auth === "register") {
+      const mode = auth as AuthMode;
+      queueMicrotask(() => {
+        setAuthDefaultMode(mode);
+        setAuthOpen(true);
+      });
+      router.replace("/", { scroll: false });
+    }
+  }, [router]);
 
   async function handleLogout() {
-    await logout()
-    router.push("/login")
-    router.refresh()
+    await logout();
   }
 
   return (
     <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-end gap-2 border-b border-border bg-background px-4">
-      {!isLoggedIn ? (
-        <Link href="/login" className={buttonVariants({ variant: "default", size: "default" })}>
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} defaultMode={authDefaultMode} />
+      {!isHydrated ? (
+        <div className="h-8 w-20 rounded-lg bg-muted/50 animate-pulse" aria-hidden />
+      ) : !isLoggedIn ? (
+        <button
+          type="button"
+          className={buttonVariants({ variant: "default", size: "default" })}
+          onClick={() => setAuthOpen(true)}
+        >
           Войти
-        </Link>
+        </button>
       ) : (
         <DropdownMenu>
           <DropdownMenuTrigger
