@@ -127,3 +127,53 @@
     @apply font-sans;
   }
 }
+
+/* Tiptap / ProseMirror editor — Obsidian-like minimal style */
+.prose-editor.ProseMirror {
+  @apply min-h-[280px] py-6 leading-relaxed;
+}
+.prose-editor.ProseMirror:focus {
+  @apply outline-none;
+}
+.prose-editor.ProseMirror p {
+  @apply my-1;
+}
+.prose-editor.ProseMirror h1 {
+  @apply mt-6 text-2xl font-semibold;
+}
+.prose-editor.ProseMirror h2 {
+  @apply mt-4 text-xl font-semibold;
+}
+.prose-editor.ProseMirror h3 {
+  @apply mt-3 text-lg font-semibold;
+}
+.prose-editor.ProseMirror ul,
+.prose-editor.ProseMirror ol {
+  @apply my-2 pl-6;
+}
+.prose-editor.ProseMirror ul {
+  @apply list-disc;
+}
+.prose-editor.ProseMirror ol {
+  @apply list-decimal;
+}
+.prose-editor.ProseMirror blockquote {
+  @apply border-l-4 border-border pl-4 italic text-muted-foreground;
+}
+.prose-editor.ProseMirror pre,
+.prose-editor.ProseMirror code {
+  @apply rounded bg-muted font-mono text-sm;
+}
+.prose-editor.ProseMirror pre {
+  @apply my-2 overflow-x-auto p-3;
+}
+.prose-editor.ProseMirror code {
+  @apply px-1.5 py-0.5;
+}
+.prose-editor.ProseMirror pre code {
+  @apply bg-transparent p-0;
+}
+/* Inline suggestion ghost text (Notion/Cursor-style) */
+.inline-suggestion-ghost {
+  @apply text-muted-foreground opacity-60;
+}

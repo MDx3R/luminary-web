@@ -112,10 +112,7 @@ export function AuthDialog({
                 </p>
               )}
               <div className="space-y-2">
-                <label
-                  htmlFor="auth-username"
-                  className="text-sm font-medium"
-                >
+                <label htmlFor="auth-username" className="text-sm font-medium">
                   Имя пользователя
                 </label>
                 <Input
@@ -129,10 +126,7 @@ export function AuthDialog({
                 />
               </div>
               <div className="space-y-2">
-                <label
-                  htmlFor="auth-password"
-                  className="text-sm font-medium"
-                >
+                <label htmlFor="auth-password" className="text-sm font-medium">
                   Пароль
                 </label>
                 <PasswordInput
@@ -146,10 +140,7 @@ export function AuthDialog({
               </div>
               {!isLogin && (
                 <div className="space-y-2">
-                  <label
-                    htmlFor="auth-confirm"
-                    className="text-sm font-medium"
-                  >
+                  <label htmlFor="auth-confirm" className="text-sm font-medium">
                     Повторите пароль
                   </label>
                   <PasswordInput

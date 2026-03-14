@@ -1,22 +1,22 @@
 export interface AuthTokensResponse {
-  user_id: string
-  access_token: string
-  refresh_token: string
+  user_id: string;
+  access_token: string;
+  refresh_token: string;
 }
 
 export interface IdentityResponse {
-  id: string
-  username: string
+  id: string;
+  username: string;
 }
 
 export interface IDResponse {
-  id: string
+  id: string;
 }
 
 export interface ApiErrorDetail {
-  error?: string
-  message?: string
-  username?: string
+  error?: string;
+  message?: string;
+  username?: string;
 }
 
 export class AuthApiError extends Error {
@@ -25,7 +25,7 @@ export class AuthApiError extends Error {
     public status: number,
     public detail?: ApiErrorDetail
   ) {
-    super(message)
-    this.name = "AuthApiError"
+    super(message);
+    this.name = "AuthApiError";
   }
 }
