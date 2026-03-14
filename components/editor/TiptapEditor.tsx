@@ -3,7 +3,10 @@
 import { useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { createEditorExtensions } from "./editor-extensions";
-import { EditorBubbleMenu, type EditorBubbleMenuCallbacks } from "./EditorBubbleMenu";
+import {
+  EditorBubbleMenu,
+  type EditorBubbleMenuCallbacks,
+} from "./EditorBubbleMenu";
 
 export interface TiptapEditorProps {
   initialContent?: string;
@@ -42,8 +45,7 @@ export function TiptapEditor({
       immediatelyRender: false,
       editorProps: {
         attributes: {
-          class:
-            "prose-editor min-h-[280px] w-full max-w-none outline-none",
+          class: "prose-editor min-h-[280px] w-full max-w-none outline-none",
         },
       },
     },

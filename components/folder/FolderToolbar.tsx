@@ -3,6 +3,7 @@
 import { FileDown, BookMarked, Check, Loader2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFolderStore } from "@/store/useFolderStore";
+import { useSourcesStore } from "@/store/useSourcesStore";
 import type { SaveStatus } from "@/types/folder";
 
 const saveStatusLabels: Record<SaveStatus, string> = {
@@ -22,13 +23,14 @@ function SaveStatusIcon({ status }: { status: SaveStatus }) {
 export function FolderToolbar() {
   const currentFolder = useFolderStore((s) => s.currentFolder);
   const saveStatus = useFolderStore((s) => s.saveStatus);
+  const setSourcesPanelOpen = useSourcesStore((s) => s.setSourcesPanelOpen);
 
   function handleExport() {
     // TODO: integrate export
   }
 
   function handleSources() {
-    // TODO: open sources list
+    setSourcesPanelOpen(true);
   }
 
   return (
