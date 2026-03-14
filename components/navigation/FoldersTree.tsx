@@ -1,9 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { ChevronRight, Plus, MoreHorizontal, FolderOpen } from "lucide-react"
+import {
+  ChevronRight,
+  Plus,
+  MoreHorizontal,
+  FolderOpen,
+  MessageSquarePlus,
+  FilePlus,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,12 +26,14 @@ function FolderRow({
   folder,
   isExpanded,
   onToggle,
-  onQuickSource,
+  onAddChat,
+  onAddSource,
 }: {
   folder: Folder
   isExpanded: boolean
   onToggle: () => void
-  onQuickSource: () => void
+  onAddChat: () => void
+  onAddSource: () => void
 }) {
   const chats = getMockFolderChats(folder.id)
   const getSourcesByFolderId = useSourcesStore((s) => s.getSourcesByFolderId)
@@ -56,18 +64,35 @@ function FolderRow({
           )}
         </button>
         <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/folder:opacity-100">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="size-6 rounded"
-            onClick={(e) => {
-              e.stopPropagation()
-              onQuickSource()
-            }}
-            aria-label="Быстро добавить источник"
-          >
-            <Plus className="size-3.5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-sidebar-accent"
+              aria-label="Добавить в папку"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Plus className="size-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="right" sideOffset={4}>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  onAddChat()
+                }}
+              >
+                <MessageSquarePlus className="size-3.5" />
+                Добавить чат
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  onAddSource()
+                }}
+              >
+                <FilePlus className="size-3.5" />
+                Добавить источник
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger
               className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-sidebar-accent"
@@ -113,9 +138,13 @@ export function FoldersTree() {
   const setFolder = useFolderStore((s) => s.setFolder)
   const setAddSourceModalOpen = useSourcesStore((s) => s.setAddSourceModalOpen)
 
-  function handleQuickSource(folder: Folder) {
+  function handleAddSource(folder: Folder) {
     setFolder(folder)
     setAddSourceModalOpen(true)
+  }
+
+  function handleAddChat(_folder: Folder) {
+    // TODO: create new chat in folder and navigate
   }
 
   return (
@@ -126,7 +155,8 @@ export function FoldersTree() {
           folder={folder}
           isExpanded={expandedFolderIds.includes(folder.id)}
           onToggle={() => toggleFolderExpanded(folder.id)}
-          onQuickSource={() => handleQuickSource(folder)}
+          onAddChat={() => handleAddChat(folder)}
+          onAddSource={() => handleAddSource(folder)}
         />
       ))}
     </div>

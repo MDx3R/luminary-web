@@ -118,11 +118,17 @@ export function ActivityBar({ onToggleNavPanel }: ActivityBarProps = {}) {
 
         <div className="flex flex-col border-t border-sidebar-border">
           <Tooltip>
-            <TooltipTrigger className="flex size-14 w-full items-center justify-center rounded-none text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-              <Link href="/settings" aria-label="Настройки" className="flex items-center justify-center">
-                <Settings className="size-5" />
-              </Link>
-            </TooltipTrigger>
+            <TooltipTrigger
+              render={
+                <Link
+                  href="/settings"
+                  aria-label="Настройки"
+                  className="flex size-14 w-full items-center justify-center rounded-none text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                >
+                  <Settings className="size-5" />
+                </Link>
+              }
+            />
             <TooltipContent side="right" sideOffset={8}>
               Настройки
             </TooltipContent>
@@ -144,23 +150,16 @@ export function ActivityBar({ onToggleNavPanel }: ActivityBarProps = {}) {
             </Tooltip>
           ) : (
             <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger className="flex size-14 w-full items-center justify-center rounded-none text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                  <DropdownMenuTrigger
-                    className="flex size-14 w-full items-center justify-center rounded-none text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    aria-label="Профиль пользователя"
-                  >
-                    <Avatar size="default" className="size-8">
-                      <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs">
-                        <User className="size-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  {user?.username ?? "Профиль"}
-                </TooltipContent>
-              </Tooltip>
+              <DropdownMenuTrigger
+                className="flex size-14 w-full items-center justify-center rounded-none text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                aria-label={user?.username ?? "Профиль пользователя"}
+              >
+                <Avatar size="default" className="size-8">
+                  <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs">
+                    <User className="size-4" />
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="end" sideOffset={8}>
                 <DropdownMenuItem>
                   <Link href="/settings">Настройки</Link>

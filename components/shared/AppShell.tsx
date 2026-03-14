@@ -1,7 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
-import { usePanelRef } from "react-resizable-panels";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -12,56 +10,90 @@ import { NavigationPanel } from "@/components/navigation/NavigationPanel";
 import { Header } from "@/components/shared/Header";
 import { SourcesPanel } from "@/components/sources/SourcesPanel";
 import { AddSourceModal } from "@/components/sources/AddSourceModal";
+import { useNavigationStore } from "@/store/useNavigationStore";
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
 const NAV_PANEL_MIN = "10";
-const NAV_PANEL_MAX = "25";
 const NAV_PANEL_DEFAULT = "15";
+const NAV_PANEL_MAX = "20";
 
 export function AppShell({ children }: AppShellProps) {
-  const navPanelRef = usePanelRef();
+  const navigationPanelCollapsed = useNavigationStore(
+    (s) => s.navigationPanelCollapsed
+  );
+  const toggleNavigationCollapsed = useNavigationStore(
+    (s) => s.toggleNavigationCollapsed
+  );
+  const toggleChatPanelCollapsed = useNavigationStore(
+    (s) => s.toggleChatPanelCollapsed
+  );
+  const navigationPanelSize = useNavigationStore((s) => s.navigationPanelSize);
+  const setNavigationPanelSize = useNavigationStore(
+    (s) => s.setNavigationPanelSize
+  );
 
-  const handleToggleNavPanel = useCallback(() => {
-    if (!navPanelRef.current) return;
-    if (navPanelRef.current.isCollapsed()) {
-      navPanelRef.current.expand();
-    } else {
-      navPanelRef.current.collapse();
-    }
-  }, [navPanelRef]);
+  const handleNavLayoutChanged = (layout: { [key: string]: number }) => {
+    const navSize = layout["luminary-nav"];
+    if (typeof navSize === "number") setNavigationPanelSize(navSize);
+  };
+
+  const navSizeClamped = Math.max(
+    Number(NAV_PANEL_MIN),
+    Math.min(Number(NAV_PANEL_DEFAULT), navigationPanelSize)
+  );
+  const defaultLayout = {
+    "luminary-nav": navSizeClamped,
+    "luminary-main": 100 - navSizeClamped,
+  };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <ActivityBar onToggleNavPanel={handleToggleNavPanel} />
-      <ResizablePanelGroup
-        orientation="horizontal"
-        id="luminary-nav-panel"
-        className="min-w-0 flex-1 basis-0"
-      >
-        <ResizablePanel
-          panelRef={navPanelRef}
-          defaultSize={NAV_PANEL_DEFAULT}
-          minSize={NAV_PANEL_MIN}
-          maxSize={NAV_PANEL_MAX}
-          collapsedSize="0"
-          collapsible
-          className="min-w-0"
-        >
-          <NavigationPanel />
-        </ResizablePanel>
-        <ResizableHandle withHandle className="border-sidebar-border" />
-        <ResizablePanel defaultSize="80" minSize="50" className="min-w-0">
-          <main className="flex h-full flex-1 flex-col overflow-auto">
-            <Header />
-            <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-              {children}
-            </div>
+    <div className="flex h-screen w-full flex-col overflow-hidden">
+      <Header
+        onToggleNavPanel={toggleNavigationCollapsed}
+        onToggleChatPanel={toggleChatPanelCollapsed}
+      />
+      <div className="flex min-h-0 flex-1">
+        <ActivityBar onToggleNavPanel={toggleNavigationCollapsed} />
+        {navigationPanelCollapsed ? (
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
+            {children}
           </main>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        ) : (
+          <ResizablePanelGroup
+            orientation="horizontal"
+            id="luminary-nav-panel"
+            className="min-w-0 flex-1 basis-0"
+            defaultLayout={defaultLayout}
+            onLayoutChanged={handleNavLayoutChanged}
+          >
+            <ResizablePanel
+              id="luminary-nav"
+              defaultSize={`${navigationPanelSize}%`}
+              minSize={`${NAV_PANEL_MIN}%`}
+              maxSize={`${NAV_PANEL_MAX}%`}
+              className="min-w-0"
+            >
+              <NavigationPanel />
+            </ResizablePanel>
+            <ResizableHandle withHandle className="border-sidebar-border" />
+            <ResizablePanel
+              id="luminary-main"
+              defaultSize={`${100 - navigationPanelSize}%`}
+              minSize="30%"
+              className="min-h-0 min-w-0 h-full flex flex-col"
+            >
+              <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                  {children}
+                </div>
+              </main>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        )}
+      </div>
       <SourcesPanel />
       <AddSourceModal />
     </div>
