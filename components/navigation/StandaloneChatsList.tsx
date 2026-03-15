@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MessageCircle, Plus } from "lucide-react";
+import { FilePlus, MessageCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { listChats } from "@/lib/api/chats-api";
@@ -57,7 +57,7 @@ export function StandaloneChatsList() {
             className="inline-flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/chat:opacity-100 hover:bg-sidebar-accent"
             aria-label="Добавить источник в чат"
           >
-            <Plus className="size-3.5" />
+            <FilePlus className="size-3.5" />
           </button>
         </div>
       ))}

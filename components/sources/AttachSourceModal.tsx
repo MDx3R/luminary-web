@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Check, FileUp, Link as LinkIcon } from "lucide-react";
+import { BookMarked, FileUp, Link as LinkIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,15 +20,8 @@ import { addSourceToFolder, removeSourceFromFolder } from "@/lib/api/folders-api
 import { addSourceToChat, removeSourceFromChat } from "@/lib/api/chats-api";
 import { createFileSource, createLinkSource } from "@/lib/api/sources-api";
 import { queryKeys } from "@/lib/query-keys";
-import { cn } from "@/lib/utils";
+import { SourceItem } from "@/components/sources/SourceItem";
 import type { Source } from "@/types/source";
-
-const fetchStatusLabels: Record<string, string> = {
-  not_fetched: "Ожидание",
-  fetched: "Загружено",
-  embedded: "Готово",
-  failed: "Ошибка",
-};
 
 type AttachStep = "list" | "upload";
 type UploadKind = "choose" | "file" | "url";
@@ -180,11 +173,14 @@ export function AttachSourceModal() {
   if (step === "upload") {
     return (
       <Dialog open={addSourceModalOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md flex flex-col max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>Загрузить новый источник</DialogTitle>
+        <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
+          <DialogHeader className="p-5 pb-0">
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+              <FileUp className="size-5 shrink-0 text-muted-foreground" />
+              Загрузить новый источник
+            </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3 py-2">
+          <div className="flex flex-col gap-4 p-5">
             {uploadKind === "choose" && (
               <>
                 <Button
@@ -213,7 +209,7 @@ export function AttachSourceModal() {
               </>
             )}
             {uploadKind === "file" && (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 <input
                   type="file"
                   accept=".pdf,.txt"
@@ -248,7 +244,7 @@ export function AttachSourceModal() {
               </div>
             )}
             {uploadKind === "url" && (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 <Input
                   type="url"
                   placeholder="https://..."
@@ -283,19 +279,22 @@ export function AttachSourceModal() {
 
   return (
     <Dialog open={addSourceModalOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md flex flex-col max-h-[85vh]">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+      <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
+        <DialogHeader className="p-5 pb-0">
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+            <BookMarked className="size-5 shrink-0 text-muted-foreground" />
+            {title}
+          </DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1 min-h-0">
-          <div className="flex flex-col items-center py-2">
+          <div className="flex flex-col items-center p-5 pt-4">
             {sourcesLoading ? (
               <p className="py-4 text-sm text-muted-foreground">
                 Загрузка источников…
               </p>
             ) : (
               <>
-                <ul className="flex w-full max-w-[280px] flex-col gap-1">
+                <ul className="flex w-full max-w-[280px] flex-col gap-2">
                   {sources.length === 0 ? (
                     <p className="py-2 text-center text-sm text-muted-foreground">
                       Нет источников. Загрузите новый ниже.
@@ -309,45 +308,16 @@ export function AttachSourceModal() {
                         addToChatMutation.isPending ||
                         removeFromChatMutation.isPending;
                       return (
-                        <li
-                          key={source.id}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                          )}
-                        >
-                          <button
-                            type="button"
-                            role="checkbox"
-                            aria-checked={isAttached}
+                        <li key={source.id}>
+                          <SourceItem
+                            source={source}
+                            selectable
+                            checked={isAttached}
+                            onCheckedChange={(checked) =>
+                              handleCheckedChange(source.id, checked)
+                            }
                             disabled={isPending}
-                            onClick={() =>
-                              handleCheckedChange(source.id, !isAttached)
-                            }
-                            className={cn(
-                              "flex shrink-0 size-6 items-center justify-center rounded-full border-2 transition-colors",
-                              isAttached
-                                ? "border-green-600 bg-green-600 text-white"
-                                : "border-muted-foreground/40 hover:border-muted-foreground/60"
-                            )}
-                            aria-label={
-                              isAttached
-                                ? `Отвязать «${source.title}»`
-                                : `Привязать «${source.title}»`
-                            }
-                          >
-                            {isAttached ? (
-                              <Check className="size-3.5 stroke-[2.5]" />
-                            ) : null}
-                          </button>
-                          <div className="min-w-0 flex-1">
-                            <span className="truncate font-medium">
-                              {source.title}
-                            </span>
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {fetchStatusLabels[source.fetch_status] ??
-                                source.fetch_status}
-                            </span>
-                          </div>
+                          />
                         </li>
                       );
                     })

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MessageSquarePlus } from "lucide-react";
 import { createChat } from "@/lib/api/chats-api";
 import { createFolderChat } from "@/lib/api/folders-api";
 import { queryKeys } from "@/lib/query-keys";
@@ -95,13 +96,14 @@ export function CreateChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
+        <DialogHeader className="p-5 pb-0">
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+            <MessageSquarePlus className="size-5 shrink-0 text-muted-foreground" />
             {isFolderChat ? "Новый чат в папке" : "Новый чат"}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-5">
           {error && (
             <p className="text-sm text-destructive" role="alert">
               {error}
@@ -120,7 +122,7 @@ export function CreateChatDialog({
               aria-invalid={!!error}
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="p-0 pt-2 flex flex-row justify-end gap-2">
             <Button
               type="button"
               variant="ghost"

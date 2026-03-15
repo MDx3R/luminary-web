@@ -20,6 +20,7 @@ import { AuthDialog } from "@/components/auth/AuthDialog";
 import { CreateFolderDialog } from "@/components/folder/CreateFolderDialog";
 import { CreateChatDialog } from "@/components/chat/CreateChatDialog";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useFolderStore } from "@/store/useFolderStore";
 import { useNavigationStore } from "@/store/useNavigationStore";
 import {
   LogOutIcon,
@@ -57,6 +58,7 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   );
   const collapseAllFolders = useNavigationStore((s) => s.collapseAllFolders);
   const chatPanelCollapsed = useNavigationStore((s) => s.chatPanelCollapsed);
+  const folderHasChats = useFolderStore((s) => s.folderHasChats);
 
   const isFolderView = pathname?.startsWith("/folder/") ?? false;
 
@@ -179,7 +181,7 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
             Свернуть все папки
           </TooltipContent>
         </Tooltip>
-        {isFolderView && onToggleChatPanel && (
+        {isFolderView && folderHasChats && onToggleChatPanel && (
           <Tooltip>
             <TooltipTrigger
               render={

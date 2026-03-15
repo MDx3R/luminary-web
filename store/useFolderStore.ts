@@ -5,6 +5,8 @@ interface FolderState {
   currentFolder: Folder | null;
   saveStatus: SaveStatus;
   selectedChatId: string | null;
+  /** True when current folder has at least one chat (for showing chat panel toggle). */
+  folderHasChats: boolean;
   setFolder: (folder: Folder | null) => void;
   setSaveStatus: (status: SaveStatus) => void;
   setSelectedChatId: (chatId: string | null) => void;
@@ -16,9 +18,13 @@ export const useFolderStore = create<FolderState>()((set) => ({
   currentFolder: null,
   saveStatus: "saved",
   selectedChatId: null,
+  folderHasChats: false,
 
   setFolder(folder) {
-    set({ currentFolder: folder });
+    set({
+      currentFolder: folder,
+      folderHasChats: (folder?.chats?.length ?? 0) > 0,
+    });
   },
 
   setSaveStatus(saveStatus) {
@@ -30,6 +36,6 @@ export const useFolderStore = create<FolderState>()((set) => ({
   },
 
   clearFolder() {
-    set({ currentFolder: null, selectedChatId: null });
+    set({ currentFolder: null, selectedChatId: null, folderHasChats: false });
   },
 }));

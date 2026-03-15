@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import {
+  LayoutDashboard,
   FileStack,
   Search,
   Library,
@@ -105,6 +106,22 @@ export function ActivityBar({ onToggleNavPanel }: ActivityBarProps = {}) {
         aria-label="Панель активностей"
       >
         <nav className="flex flex-1 flex-col pt-2" aria-label="Разделы">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Link
+                  href="/dashboard"
+                  aria-label="Дашборд"
+                  className="flex size-14 w-full items-center justify-center rounded-none text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                >
+                  <LayoutDashboard className="size-5" />
+                </Link>
+              }
+            />
+            <TooltipContent side="right" sideOffset={8}>
+              Дашборд
+            </TooltipContent>
+          </Tooltip>
           {TOP_SECTIONS.map(({ id, label, icon }) => (
             <ActivityBarButton
               key={id}

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Link, Trash2 } from "lucide-react";
+import { FileText, Link, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Source } from "@/types/source";
@@ -12,6 +12,11 @@ type SourceLike = Source | FolderSourceItem;
 interface SourceItemProps {
   source: SourceLike;
   onRemove?: (sourceId: string) => void;
+  /** When true, show checkbox for attach/detach instead of remove button. */
+  selectable?: boolean;
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
 }
 
 const fetchStatusLabels: Record<string, string> = {
@@ -28,7 +33,14 @@ const fetchStatusBadgeClass: Record<string, string> = {
   failed: "bg-destructive/15 text-destructive",
 };
 
-export function SourceItem({ source, onRemove }: SourceItemProps) {
+export function SourceItem({
+  source,
+  onRemove,
+  selectable,
+  checked,
+  onCheckedChange,
+  disabled,
+}: SourceItemProps) {
   const type = source.type ?? "file";
   const isFile = type === "file" || type === "page";
   const displayTitle =
@@ -59,15 +71,38 @@ export function SourceItem({ source, onRemove }: SourceItemProps) {
           {statusLabel}
         </Badge>
       </div>
-      {onRemove && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => onRemove(source.id)}
-          aria-label="Убрать из папки"
+      {selectable && onCheckedChange ? (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={checked}
+          disabled={disabled}
+          onClick={() => onCheckedChange(!checked)}
+          className={cn(
+            "flex shrink-0 size-6 items-center justify-center rounded-full border-2 transition-colors",
+            checked
+              ? "border-green-600 bg-green-600 text-white"
+              : "border-muted-foreground/40 hover:border-muted-foreground/60 disabled:opacity-50"
+          )}
+          aria-label={
+            checked
+              ? `Отвязать «${displayTitle}»`
+              : `Привязать «${displayTitle}»`
+          }
         >
-          <Trash2 className="size-4 text-muted-foreground" />
-        </Button>
+          {checked ? <Check className="size-3.5 stroke-[2.5]" /> : null}
+        </button>
+      ) : (
+        onRemove && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => onRemove(source.id)}
+            aria-label="Убрать из папки"
+          >
+            <Trash2 className="size-4 text-muted-foreground" />
+          </Button>
+        )
       )}
     </div>
   );

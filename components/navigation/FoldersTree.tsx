@@ -4,11 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   ChevronRight,
-  Plus,
+  FilePlus,
+  FileText,
+  MessageCircle,
   MoreHorizontal,
   FolderOpen,
   MessageSquarePlus,
-  FilePlus,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -123,6 +124,15 @@ function FolderRow({
       </div>
       {isExpanded && (
         <div className="ml-4 border-l border-sidebar-border pl-2">
+          <div className="group/chat flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+            <Link
+              href={`/folder/${folder.id}`}
+              className="flex min-w-0 flex-1 items-center gap-2"
+            >
+              <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">Editor.md</span>
+            </Link>
+          </div>
           {chats.map((chat) => (
             <div
               key={chat.id}
@@ -132,6 +142,7 @@ function FolderRow({
                 href={`/folder/${folder.id}?chat=${chat.id}`}
                 className="flex min-w-0 flex-1 items-center gap-2"
               >
+                <MessageCircle className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="truncate">{chat.name}</span>
               </Link>
               <button
@@ -143,7 +154,7 @@ function FolderRow({
                 className="inline-flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/chat:opacity-100 hover:bg-sidebar-accent"
                 aria-label="Добавить источник в чат"
               >
-                <Plus className="size-3.5" />
+                <FilePlus className="size-3.5" />
               </button>
             </div>
           ))}

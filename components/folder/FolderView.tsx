@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -26,6 +26,7 @@ interface FolderViewProps {
 }
 
 export function FolderView({ folderId }: FolderViewProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const setFolder = useFolderStore((s) => s.setFolder);
   const clearFolder = useFolderStore((s) => s.clearFolder);
@@ -71,6 +72,28 @@ export function FolderView({ folderId }: FolderViewProps) {
     }
   }, [effectiveChatId, messages, setActiveChat, setChatMessages]);
 
+  // Sync URL with first chat when panel is open and URL has no chat param
+  useEffect(() => {
+    if (
+      folder &&
+      (folder.chats?.length ?? 0) > 0 &&
+      !chatFromUrl &&
+      effectiveChatId &&
+      !chatPanelCollapsed
+    ) {
+      router.replace(`/folder/${folderId}?chat=${effectiveChatId}`, {
+        scroll: false,
+      });
+    }
+  }, [
+    folder,
+    folderId,
+    chatFromUrl,
+    effectiveChatId,
+    chatPanelCollapsed,
+    router,
+  ]);
+
   if (folderLoading || !folder) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center p-4">
@@ -81,7 +104,11 @@ export function FolderView({ folderId }: FolderViewProps) {
     );
   }
 
-  if (chatPanelCollapsed) {
+  const hasChats = (folder.chats?.length ?? 0) > 0;
+  const showEditorOnly =
+    !hasChats || chatPanelCollapsed;
+
+  if (showEditorOnly) {
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <EditorPanel />
