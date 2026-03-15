@@ -2,6 +2,24 @@ import type { ChatSourceItem } from "@/types/source";
 
 export type MessageRole = "user" | "assistant";
 
+export type MessageStatus =
+  | "pending"
+  | "processing"
+  | "streaming"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type StreamState = "start" | "delta" | "end" | "error";
+
+export interface StreamingMessageEvent {
+  message_id: string;
+  state: StreamState;
+  content: string;
+  author: string;
+  status: string;
+}
+
 export interface AttachmentItem {
   name: string;
   content_id: string;

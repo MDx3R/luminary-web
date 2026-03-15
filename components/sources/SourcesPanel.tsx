@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -14,7 +16,9 @@ import { useFolderStore } from "@/store/useFolderStore";
 import { useSourcesStore } from "@/store/useSourcesStore";
 import { removeSourceFromFolder } from "@/lib/api/folders-api";
 import { queryKeys } from "@/lib/query-keys";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { SourceItem } from "./SourceItem";
+import { ApiClientError } from "@/lib/api-client";
 
 export function SourcesPanel() {
   const queryClient = useQueryClient();
@@ -22,6 +26,10 @@ export function SourcesPanel() {
   const sourcesPanelOpen = useSourcesStore((s) => s.sourcesPanelOpen);
   const setSourcesPanelOpen = useSourcesStore((s) => s.setSourcesPanelOpen);
   const openAttachModal = useSourcesStore((s) => s.openAttachModal);
+  const [sourceToRemove, setSourceToRemove] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const folderId = currentFolder?.id ?? null;
   const sources = currentFolder?.sources ?? [];
@@ -32,6 +40,15 @@ export function SourcesPanel() {
     onSuccess: () => {
       if (folderId)
         queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sources });
+      toast.success("Источник убран из папки");
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof ApiClientError
+          ? err.message
+          : "Не удалось убрать источник из папки.";
+      toast.error(msg);
     },
   });
 
@@ -39,11 +56,17 @@ export function SourcesPanel() {
     if (folderId) openAttachModal({ type: "folder", id: folderId });
   }
 
-  function handleRemove(sourceId: string) {
-    if (folderId) removeMutation.mutate(sourceId);
+  function handleRemove(sourceId: string, sourceTitle: string) {
+    setSourceToRemove({ id: sourceId, title: sourceTitle });
+  }
+
+  async function handleConfirmRemove() {
+    if (!sourceToRemove || !folderId) return;
+    await removeMutation.mutateAsync(sourceToRemove.id);
   }
 
   return (
+    <>
     <Sheet open={sourcesPanelOpen} onOpenChange={setSourcesPanelOpen}>
       <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
         <SheetHeader>
@@ -75,7 +98,7 @@ export function SourcesPanel() {
                   <li key={source.id}>
                     <SourceItem
                       source={source}
-                      onRemove={handleRemove}
+                      onRemove={() => handleRemove(source.id, source.title)}
                     />
                   </li>
                 ))}
@@ -85,5 +108,19 @@ export function SourcesPanel() {
         </div>
       </SheetContent>
     </Sheet>
+    <ConfirmDeleteDialog
+      open={!!sourceToRemove}
+      onOpenChange={(open) => !open && setSourceToRemove(null)}
+      title="Убрать источник из папки?"
+      description={
+        sourceToRemove
+          ? `Источник «${sourceToRemove.title}» будет отвязан от папки.`
+          : ""
+      }
+      confirmLabel="Убрать"
+      onConfirm={handleConfirmRemove}
+      isPending={removeMutation.isPending}
+    />
+  </>
   );
 }

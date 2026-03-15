@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   ChevronRight,
   FilePlus,
@@ -10,8 +12,9 @@ import {
   MoreHorizontal,
   FolderOpen,
   MessageSquarePlus,
+  Trash2,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -21,10 +24,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNavigationStore } from "@/store/useNavigationStore";
 import { useSourcesStore } from "@/store/useSourcesStore";
-import { listFolders } from "@/lib/api/folders-api";
-import { getFolder } from "@/lib/api/folders-api";
+import { useFolderStore } from "@/store/useFolderStore";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
+import { listFolders, getFolder, deleteFolder, removeChatFromFolder } from "@/lib/api/folders-api";
 import { queryKeys } from "@/lib/query-keys";
 import { CreateChatDialog } from "@/components/chat/CreateChatDialog";
+import { RenameFolderDialog } from "@/components/folder/RenameFolderDialog";
+import { RenameChatDialog } from "@/components/chat/RenameChatDialog";
+import { ApiClientError } from "@/lib/api-client";
 import type { FolderSummary } from "@/types/folder";
 
 function FolderRow({
@@ -34,6 +41,10 @@ function FolderRow({
   onAddChat,
   onAddSource,
   onAddSourceToChat,
+  onDeleteFolder,
+  onRenameFolder,
+  onRenameChatInFolder,
+  onRemoveChatFromFolder,
 }: {
   folder: FolderSummary;
   isExpanded: boolean;
@@ -41,6 +52,10 @@ function FolderRow({
   onAddChat: () => void;
   onAddSource: () => void;
   onAddSourceToChat: (chatId: string) => void;
+  onDeleteFolder: (folder: FolderSummary) => void;
+  onRenameFolder: (folder: FolderSummary) => void;
+  onRenameChatInFolder: (folderId: string, chatId: string, chatName: string) => void;
+  onRemoveChatFromFolder: (folderId: string, chatId: string, chatName: string) => void;
 }) {
   const { data: folderDetails } = useQuery({
     queryKey: queryKeys.folder(folder.id),
@@ -109,12 +124,12 @@ function FolderRow({
               <MoreHorizontal className="size-3.5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="right" sideOffset={4}>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuItem onClick={() => onRenameFolder(folder)}>
                 Переименовать
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={(e) => e.preventDefault()}
+                onClick={() => onDeleteFolder(folder)}
               >
                 Удалить
               </DropdownMenuItem>
@@ -156,6 +171,32 @@ function FolderRow({
               >
                 <FilePlus className="size-3.5" />
               </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="inline-flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/chat:opacity-100 hover:bg-sidebar-accent"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <MoreHorizontal className="size-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="right" sideOffset={4}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      onRenameChatInFolder(folder.id, chat.id, chat.name)
+                    }
+                  >
+                    Переименовать
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() =>
+                      onRemoveChatFromFolder(folder.id, chat.id, chat.name)
+                    }
+                  >
+                    <Trash2 className="size-3.5" />
+                    Убрать из папки
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ))}
         </div>
@@ -165,19 +206,69 @@ function FolderRow({
 }
 
 export function FoldersTree() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const expandedFolderIds = useNavigationStore((s) => s.expandedFolderIds);
   const toggleFolderExpanded = useNavigationStore(
     (s) => s.toggleFolderExpanded
   );
   const openAttachModal = useSourcesStore((s) => s.openAttachModal);
+  const currentFolderId = useFolderStore((s) => s.currentFolder?.id);
+  const clearFolder = useFolderStore((s) => s.clearFolder);
   const [createChatOpen, setCreateChatOpen] = useState(false);
   const [createChatFolderId, setCreateChatFolderId] = useState<string | null>(
     null
   );
+  const [folderToDelete, setFolderToDelete] = useState<FolderSummary | null>(null);
+  const [folderToRename, setFolderToRename] = useState<FolderSummary | null>(null);
+  const [chatToRenameInFolder, setChatToRenameInFolder] = useState<{
+    folderId: string;
+    chatId: string;
+    chatName: string;
+  } | null>(null);
+  const [chatToRemoveFromFolder, setChatToRemoveFromFolder] = useState<{
+    folderId: string;
+    chatId: string;
+    chatName: string;
+  } | null>(null);
 
   const { data: folders = [], isLoading } = useQuery({
     queryKey: queryKeys.folders,
     queryFn: listFolders,
+  });
+
+  const deleteFolderMutation = useMutation({
+    mutationFn: (id: string) => deleteFolder(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.folders });
+      if (currentFolderId === id) {
+        clearFolder();
+        router.push("/");
+      }
+      toast.success("Папка удалена");
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof ApiClientError ? err.message : "Не удалось удалить папку.";
+      toast.error(msg);
+    },
+  });
+
+  const removeChatFromFolderMutation = useMutation({
+    mutationFn: ({ folderId, chatId }: { folderId: string; chatId: string }) =>
+      removeChatFromFolder(folderId, chatId),
+    onSuccess: (_, { folderId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.folders });
+      toast.success("Чат убран из папки");
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof ApiClientError
+          ? err.message
+          : "Не удалось убрать чат из папки.";
+      toast.error(msg);
+    },
   });
 
   function handleAddSource(folder: FolderSummary) {
@@ -196,6 +287,43 @@ export function FoldersTree() {
   function handleCreateChatOpenChange(open: boolean) {
     if (!open) setCreateChatFolderId(null);
     setCreateChatOpen(open);
+  }
+
+  function handleDeleteFolder(folder: FolderSummary) {
+    setFolderToDelete(folder);
+  }
+
+  function handleRenameFolder(folder: FolderSummary) {
+    setFolderToRename(folder);
+  }
+
+  async function handleConfirmDeleteFolder() {
+    if (!folderToDelete) return;
+    await deleteFolderMutation.mutateAsync(folderToDelete.id);
+  }
+
+  function handleRenameChatInFolder(
+    folderId: string,
+    chatId: string,
+    chatName: string
+  ) {
+    setChatToRenameInFolder({ folderId, chatId, chatName });
+  }
+
+  function handleRemoveChatFromFolder(
+    folderId: string,
+    chatId: string,
+    chatName: string
+  ) {
+    setChatToRemoveFromFolder({ folderId, chatId, chatName });
+  }
+
+  async function handleConfirmRemoveChatFromFolder() {
+    if (!chatToRemoveFromFolder) return;
+    await removeChatFromFolderMutation.mutateAsync({
+      folderId: chatToRemoveFromFolder.folderId,
+      chatId: chatToRemoveFromFolder.chatId,
+    });
   }
 
   if (isLoading) {
@@ -218,6 +346,10 @@ export function FoldersTree() {
             onAddChat={() => handleAddChat(folder)}
             onAddSource={() => handleAddSource(folder)}
             onAddSourceToChat={handleAddSourceToChat}
+            onDeleteFolder={handleDeleteFolder}
+            onRenameFolder={handleRenameFolder}
+            onRenameChatInFolder={handleRenameChatInFolder}
+            onRemoveChatFromFolder={handleRemoveChatFromFolder}
           />
         ))}
       </div>
@@ -225,6 +357,47 @@ export function FoldersTree() {
         open={createChatOpen}
         onOpenChange={handleCreateChatOpenChange}
         folderId={createChatFolderId}
+      />
+      <RenameFolderDialog
+        key={folderToRename ? `folder-${folderToRename.id}` : "folder-closed"}
+        open={!!folderToRename}
+        onOpenChange={(open) => !open && setFolderToRename(null)}
+        folderId={folderToRename?.id ?? null}
+        folderName={folderToRename?.name ?? ""}
+        folderDescription={folderToRename?.description ?? null}
+      />
+      <RenameChatDialog
+        key={chatToRenameInFolder ? `chat-${chatToRenameInFolder.chatId}` : "chat-closed"}
+        open={!!chatToRenameInFolder}
+        onOpenChange={(open) => !open && setChatToRenameInFolder(null)}
+        chatId={chatToRenameInFolder?.chatId ?? null}
+        chatName={chatToRenameInFolder?.chatName ?? ""}
+        folderId={chatToRenameInFolder?.folderId ?? null}
+      />
+      <ConfirmDeleteDialog
+        open={!!folderToDelete}
+        onOpenChange={(open) => !open && setFolderToDelete(null)}
+        title="Удалить папку?"
+        description={
+          folderToDelete
+            ? `Папка «${folderToDelete.name}» и все связанные данные будут удалены.`
+            : ""
+        }
+        onConfirm={handleConfirmDeleteFolder}
+        isPending={deleteFolderMutation.isPending}
+      />
+      <ConfirmDeleteDialog
+        open={!!chatToRemoveFromFolder}
+        onOpenChange={(open) => !open && setChatToRemoveFromFolder(null)}
+        title="Убрать чат из папки?"
+        description={
+          chatToRemoveFromFolder
+            ? `Чат «${chatToRemoveFromFolder.chatName}» будет отвязан от папки.`
+            : ""
+        }
+        confirmLabel="Убрать"
+        onConfirm={handleConfirmRemoveChatFromFolder}
+        isPending={removeChatFromFolderMutation.isPending}
       />
     </>
   );

@@ -17,8 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AuthDialog } from "@/components/auth/AuthDialog";
-import { CreateFolderDialog } from "@/components/folder/CreateFolderDialog";
-import { CreateChatDialog } from "@/components/chat/CreateChatDialog";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useFolderStore } from "@/store/useFolderStore";
 import { useNavigationStore } from "@/store/useNavigationStore";
@@ -27,9 +25,6 @@ import {
   UserIcon,
   PanelLeftClose,
   PanelLeft,
-  MessageSquarePlus,
-  FolderPlus,
-  ChevronsUpDown,
   PanelRightClose,
   PanelRight,
 } from "lucide-react";
@@ -46,8 +41,6 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   const pathname = usePathname();
   const [authOpen, setAuthOpen] = useState(false);
   const [authDefaultMode, setAuthDefaultMode] = useState<AuthMode>("login");
-  const [createFolderOpen, setCreateFolderOpen] = useState(false);
-  const [createChatOpen, setCreateChatOpen] = useState(false);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
@@ -56,7 +49,6 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   const navigationPanelCollapsed = useNavigationStore(
     (s) => s.navigationPanelCollapsed
   );
-  const collapseAllFolders = useNavigationStore((s) => s.collapseAllFolders);
   const chatPanelCollapsed = useNavigationStore((s) => s.chatPanelCollapsed);
   const folderHasChats = useFolderStore((s) => s.folderHasChats);
 
@@ -84,19 +76,11 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-11 w-full shrink-0 items-center justify-between gap-2 border-b border-border bg-background px-3">
+    <header className="sticky top-0 z-40 flex h-11 w-full shrink-0 items-center justify-between gap-2 border-b border-border bg-sidebar px-3">
       <AuthDialog
         open={authOpen}
         onOpenChange={setAuthOpen}
         defaultMode={authDefaultMode}
-      />
-      <CreateFolderDialog
-        open={createFolderOpen}
-        onOpenChange={setCreateFolderOpen}
-      />
-      <CreateChatDialog
-        open={createChatOpen}
-        onOpenChange={setCreateChatOpen}
       />
       <div className="flex min-w-0 flex-1 items-center gap-1">
         {onToggleNavPanel && (
@@ -127,60 +111,6 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
             </TooltipContent>
           </Tooltip>
         )}
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0"
-                onClick={() => setCreateChatOpen(true)}
-                aria-label="Новый чат"
-              >
-                <MessageSquarePlus className="size-5" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom" sideOffset={4}>
-            Новый чат
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0"
-                onClick={() => setCreateFolderOpen(true)}
-                aria-label="Новая папка"
-              >
-                <FolderPlus className="size-5" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom" sideOffset={4}>
-            Новая папка
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0"
-                onClick={collapseAllFolders}
-                aria-label="Свернуть все папки"
-              >
-                <ChevronsUpDown className="size-5" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom" sideOffset={4}>
-            Свернуть все папки
-          </TooltipContent>
-        </Tooltip>
         {isFolderView && folderHasChats && onToggleChatPanel && (
           <Tooltip>
             <TooltipTrigger

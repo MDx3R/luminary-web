@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { BookMarked, FileUp, Link as LinkIcon } from "lucide-react";
 import {
@@ -18,9 +19,23 @@ import { getFolder } from "@/lib/api/folders-api";
 import { getChat } from "@/lib/api/chats-api";
 import { addSourceToFolder, removeSourceFromFolder } from "@/lib/api/folders-api";
 import { addSourceToChat, removeSourceFromChat } from "@/lib/api/chats-api";
-import { createFileSource, createLinkSource } from "@/lib/api/sources-api";
+import {
+  createFileSource,
+  createLinkSource,
+  deleteSource,
+} from "@/lib/api/sources-api";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
+import { RenameSourceDialog } from "@/components/sources/RenameSourceDialog";
 import { SourceItem } from "@/components/sources/SourceItem";
+import { ApiClientError } from "@/lib/api-client";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Source } from "@/types/source";
 
 type AttachStep = "list" | "upload";
@@ -36,6 +51,18 @@ export function AttachSourceModal() {
   const [uploadKind, setUploadKind] = useState<UploadKind>("choose");
   const [urlValue, setUrlValue] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [sourceToRemove, setSourceToRemove] = useState<{
+    sourceId: string;
+    sourceTitle: string;
+  } | null>(null);
+  const [sourceToRename, setSourceToRename] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [sourceToDelete, setSourceToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const { data: sources = [], isLoading: sourcesLoading } = useQuery({
     queryKey: queryKeys.sources,
@@ -78,6 +105,13 @@ export function AttachSourceModal() {
     onSuccess: () => {
       if (folderId)
         queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sources });
+      toast.success("Источник убран из папки");
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof ApiClientError ? err.message : "Не удалось убрать источник из папки."
+      );
     },
   });
   const addToChatMutation = useMutation({
@@ -94,18 +128,67 @@ export function AttachSourceModal() {
     onSuccess: () => {
       if (chatId)
         queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sources });
+      toast.success("Источник убран из чата");
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof ApiClientError ? err.message : "Не удалось убрать источник из чата."
+      );
     },
   });
 
   function handleCheckedChange(sourceId: string, checked: boolean) {
     if (folderId) {
       if (checked) addToFolderMutation.mutate({ sourceId });
-      else removeFromFolderMutation.mutate({ sourceId });
+      else {
+        const src = sources.find((s) => s.id === sourceId);
+        setSourceToRemove({
+          sourceId,
+          sourceTitle: src?.title ?? "Источник",
+        });
+      }
     } else if (chatId) {
       if (checked) addToChatMutation.mutate({ sourceId });
-      else removeFromChatMutation.mutate({ sourceId });
+      else {
+        const src = sources.find((s) => s.id === sourceId);
+        setSourceToRemove({
+          sourceId,
+          sourceTitle: src?.title ?? "Источник",
+        });
+      }
     }
   }
+
+  async function handleConfirmRemoveSource() {
+    if (!sourceToRemove) return;
+    if (folderId) {
+      await removeFromFolderMutation.mutateAsync({
+        sourceId: sourceToRemove.sourceId,
+      });
+    } else if (chatId) {
+      await removeFromChatMutation.mutateAsync({
+        sourceId: sourceToRemove.sourceId,
+      });
+    }
+  }
+
+  const deleteSourceMutation = useMutation({
+    mutationFn: (id: string) => deleteSource(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sources });
+      if (folderId)
+        queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
+      if (chatId)
+        queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId) });
+      toast.success("Источник удалён");
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof ApiClientError ? err.message : "Не удалось удалить источник."
+      );
+    },
+  });
 
   const createFileMutation = useMutation({
     mutationFn: () =>
@@ -278,6 +361,7 @@ export function AttachSourceModal() {
   }
 
   return (
+    <>
     <Dialog open={addSourceModalOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
         <DialogHeader className="p-5 pb-0">
@@ -306,18 +390,57 @@ export function AttachSourceModal() {
                         addToFolderMutation.isPending ||
                         removeFromFolderMutation.isPending ||
                         addToChatMutation.isPending ||
-                        removeFromChatMutation.isPending;
+                        removeFromChatMutation.isPending ||
+                        deleteSourceMutation.isPending;
                       return (
-                        <li key={source.id}>
-                          <SourceItem
-                            source={source}
-                            selectable
-                            checked={isAttached}
-                            onCheckedChange={(checked) =>
-                              handleCheckedChange(source.id, checked)
-                            }
-                            disabled={isPending}
-                          />
+                        <li
+                          key={source.id}
+                          className="flex items-center gap-1 rounded-lg border border-border bg-background"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <SourceItem
+                              source={source}
+                              selectable
+                              checked={isAttached}
+                              onCheckedChange={(checked) =>
+                                handleCheckedChange(source.id, checked)
+                              }
+                              disabled={isPending}
+                            />
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              className="shrink-0 rounded p-1 hover:bg-muted"
+                              onClick={(e) => e.preventDefault()}
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" sideOffset={4}>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setSourceToRename({
+                                    id: source.id,
+                                    title: source.title ?? "Источник",
+                                  })
+                                }
+                              >
+                                <Pencil className="size-3.5" />
+                                Переименовать
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() =>
+                                  setSourceToDelete({
+                                    id: source.id,
+                                    title: source.title ?? "Источник",
+                                  })
+                                }
+                              >
+                                <Trash2 className="size-3.5" />
+                                Удалить источник
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </li>
                       );
                     })
@@ -340,5 +463,47 @@ export function AttachSourceModal() {
         </ScrollArea>
       </DialogContent>
     </Dialog>
+    <ConfirmDeleteDialog
+      open={!!sourceToRemove}
+      onOpenChange={(open) => !open && setSourceToRemove(null)}
+      title={
+        folderId
+          ? "Убрать источник из папки?"
+          : "Убрать источник из чата?"
+      }
+      description={
+        sourceToRemove
+          ? `Источник «${sourceToRemove.sourceTitle}» будет отвязан.`
+          : ""
+      }
+      confirmLabel="Убрать"
+      onConfirm={handleConfirmRemoveSource}
+      isPending={
+        removeFromFolderMutation.isPending || removeFromChatMutation.isPending
+      }
+    />
+    <RenameSourceDialog
+      key={sourceToRename?.id ?? "closed"}
+      open={!!sourceToRename}
+      onOpenChange={(open) => !open && setSourceToRename(null)}
+      sourceId={sourceToRename?.id ?? null}
+      sourceTitle={sourceToRename?.title ?? ""}
+    />
+    <ConfirmDeleteDialog
+      open={!!sourceToDelete}
+      onOpenChange={(open) => !open && setSourceToDelete(null)}
+      title="Удалить источник?"
+      description={
+        sourceToDelete
+          ? `Источник «${sourceToDelete.title}» будет удалён без возможности восстановления.`
+          : ""
+      }
+      onConfirm={async () => {
+        if (sourceToDelete)
+          await deleteSourceMutation.mutateAsync(sourceToDelete.id);
+      }}
+      isPending={deleteSourceMutation.isPending}
+    />
+    </>
   );
 }

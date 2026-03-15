@@ -10,6 +10,21 @@ export async function getSource(id: string): Promise<Source> {
   return apiFetch<Source>(`/sources/${id}`);
 }
 
+export async function updateSource(
+  id: string,
+  payload: { title: string }
+): Promise<void> {
+  return apiFetch<void>(`/sources/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteSource(id: string): Promise<void> {
+  return apiFetch<void>(`/sources/${id}`, { method: "DELETE" });
+}
+
 export async function createFileSource(
   file: File,
   title: string

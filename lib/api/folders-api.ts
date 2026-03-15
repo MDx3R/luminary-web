@@ -32,6 +32,30 @@ export async function updateFolder(
   });
 }
 
+export async function deleteFolder(id: string): Promise<void> {
+  return apiFetch<void>(`/folders/${id}`, { method: "DELETE" });
+}
+
+export async function updateFolderEditor(
+  folderId: string,
+  payload: { text: string }
+): Promise<void> {
+  return apiFetch<void>(`/folders/${folderId}/editor`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function removeChatFromFolder(
+  folderId: string,
+  chatId: string
+): Promise<void> {
+  return apiFetch<void>(`/folders/${folderId}/chats/${chatId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function addSourceToFolder(
   folderId: string,
   sourceId: string

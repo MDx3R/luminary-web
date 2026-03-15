@@ -13,6 +13,11 @@ interface ChatState {
     chatId: string,
     message: Pick<ChatMessage, "role" | "content"> & Partial<ChatMessage>
   ) => void;
+  updateMessage: (
+    chatId: string,
+    messageId: string,
+    partial: Partial<ChatMessage>
+  ) => void;
   setChatMessages: (chatId: string, messages: ChatMessage[]) => void;
   initChat: (chatId: string, initialMessages?: ChatMessage[]) => void;
 }
@@ -36,7 +41,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   addMessage(chatId, message) {
     const newMessage: ChatMessage = {
       ...message,
-      id: generateMessageId(),
+      id: message.id ?? generateMessageId(),
       chat_id: chatId,
       role: message.role ?? "user",
       status: message.status ?? "pending",
@@ -52,6 +57,17 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         [chatId]: [...(state.chats[chatId] ?? []), newMessage],
       },
     }));
+  },
+
+  updateMessage(chatId, messageId, partial) {
+    set((state) => {
+      const list = state.chats[chatId] ?? [];
+      const idx = list.findIndex((m) => m.id === messageId);
+      if (idx < 0) return state;
+      const next = [...list];
+      next[idx] = { ...next[idx], ...partial };
+      return { chats: { ...state.chats, [chatId]: next } };
+    });
   },
 
   setChatMessages(chatId, messages) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { AppShell } from "@/components/shared/AppShell";
 import "./globals.css";
@@ -35,6 +36,7 @@ export default function RootLayout({
           <TooltipProvider>
             <AppShell>{children}</AppShell>
           </TooltipProvider>
+          <Toaster />
         </QueryProvider>
       </body>
     </html>
