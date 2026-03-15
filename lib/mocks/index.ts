@@ -1,8 +1,23 @@
-import type { Assistant } from "@/types/assistant";
+import type { AssistantSummary } from "@/types/assistant";
 
 /** Placeholder until assistants API is available */
-export const mockAssistants: Assistant[] = [
-  { id: "asst-1", name: "Исследователь" },
-  { id: "asst-2", name: "Редактор" },
-  { id: "asst-3", name: "Аналитик" },
+export const mockAssistants: AssistantSummary[] = [
+  {
+    id: "asst-1",
+    name: "Исследователь",
+    description: "",
+    type: "custom",
+  },
+  {
+    id: "asst-2",
+    name: "Редактор",
+    description: "",
+    type: "custom",
+  },
+  {
+    id: "asst-3",
+    name: "Аналитик",
+    description: "",
+    type: "custom",
+  },
 ];

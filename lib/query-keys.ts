@@ -5,4 +5,6 @@ export const queryKeys = {
   chats: ["chats"] as const,
   chat: (id: string) => ["chat", id] as const,
   messages: (chatId: string) => ["messages", chatId] as const,
+  assistants: ["assistants"] as const,
+  assistant: (id: string) => ["assistant", id] as const,
 };
