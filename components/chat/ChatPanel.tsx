@@ -114,6 +114,7 @@ export function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const isSubmittingRef = useRef(false);
 
   const activeChatId = useChatStore((s) => s.activeChatId);
   const currentChatId = chatId ?? activeChatId;
@@ -272,6 +273,8 @@ export function ChatPanel({
         err instanceof Error ? err.message : "Не удалось отправить сообщение";
       setSendError(message);
       inputRef.current?.focus();
+    } finally {
+      isSubmittingRef.current = false;
     }
   }
 
