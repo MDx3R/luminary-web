@@ -1,33 +1,27 @@
 import { create } from "zustand";
-import type { Source, SourceKind, SourceStatus } from "@/types/source";
 
-interface AddSourcePayload {
-  title: string;
-  url?: string;
-  fileName?: string;
-  mimeType?: string;
-}
+export type AttachContext =
+  | { type: "folder"; id: string }
+  | { type: "chat"; id: string }
+  | null;
 
 interface SourcesState {
-  sources: Source[];
   sourcesPanelOpen: boolean;
   addSourceModalOpen: boolean;
+  /** When AttachSourceModal is open: folder or chat we're attaching to. */
+  attachContext: AttachContext;
   setSourcesPanelOpen: (open: boolean) => void;
   setAddSourceModalOpen: (open: boolean) => void;
-  getSourcesByFolderId: (folderId: string) => Source[];
-  addSource: (
-    folderId: string,
-    kind: SourceKind,
-    payload: AddSourcePayload
-  ) => void;
-  removeSource: (id: string) => void;
-  setSourceStatus: (id: string, status: SourceStatus) => void;
+  setAttachContext: (context: AttachContext) => void;
+  /** Open attach modal for folder or chat. */
+  openAttachModal: (context: AttachContext) => void;
+  closeAttachModal: () => void;
 }
 
-export const useSourcesStore = create<SourcesState>()((set, get) => ({
-  sources: [],
+export const useSourcesStore = create<SourcesState>()((set) => ({
   sourcesPanelOpen: false,
   addSourceModalOpen: false,
+  attachContext: null,
 
   setSourcesPanelOpen(open) {
     set({ sourcesPanelOpen: open });
@@ -37,38 +31,15 @@ export const useSourcesStore = create<SourcesState>()((set, get) => ({
     set({ addSourceModalOpen: open });
   },
 
-  getSourcesByFolderId(folderId: string) {
-    return get().sources.filter((s) => s.folderId === folderId);
+  setAttachContext(context) {
+    set({ attachContext: context });
   },
 
-  addSource(folderId, kind, payload) {
-    const id = crypto.randomUUID();
-    const source: Source = {
-      id,
-      folderId,
-      kind,
-      title: payload.title,
-      status: "processing",
-      ...(kind === "file" && {
-        fileName: payload.fileName,
-        mimeType: payload.mimeType,
-      }),
-      ...(kind === "url" && { url: payload.url }),
-    };
-    set((state) => ({ sources: [...state.sources, source] }));
+  openAttachModal(context) {
+    set({ attachContext: context, addSourceModalOpen: true });
   },
 
-  removeSource(id) {
-    set((state) => ({
-      sources: state.sources.filter((s) => s.id !== id),
-    }));
-  },
-
-  setSourceStatus(id, status) {
-    set((state) => ({
-      sources: state.sources.map((s) =>
-        s.id === id ? { ...s, status } : s
-      ),
-    }));
+  closeAttachModal() {
+    set({ addSourceModalOpen: false, attachContext: null });
   },
 }));

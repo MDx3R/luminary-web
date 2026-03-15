@@ -1,18 +1,21 @@
 import { create } from "zustand";
 import type { Folder, SaveStatus } from "@/types/folder";
-import { getMockFolderById } from "@/lib/mocks";
 
 interface FolderState {
   currentFolder: Folder | null;
   saveStatus: SaveStatus;
+  selectedChatId: string | null;
   setFolder: (folder: Folder | null) => void;
   setSaveStatus: (status: SaveStatus) => void;
-  initFromFolderId: (folderId: string) => void;
+  setSelectedChatId: (chatId: string | null) => void;
+  /** Clears current folder and selected chat (e.g. when navigating away). */
+  clearFolder: () => void;
 }
 
 export const useFolderStore = create<FolderState>()((set) => ({
   currentFolder: null,
   saveStatus: "saved",
+  selectedChatId: null,
 
   setFolder(folder) {
     set({ currentFolder: folder });
@@ -22,8 +25,11 @@ export const useFolderStore = create<FolderState>()((set) => ({
     set({ saveStatus });
   },
 
-  initFromFolderId(folderId: string) {
-    const folder = getMockFolderById(folderId);
-    set({ currentFolder: folder });
+  setSelectedChatId(chatId) {
+    set({ selectedChatId: chatId });
+  },
+
+  clearFolder() {
+    set({ currentFolder: null, selectedChatId: null });
   },
 }));

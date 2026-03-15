@@ -9,7 +9,10 @@ interface ChatState {
 
   setActiveChat: (chatId: string | null) => void;
   getMessages: (chatId: string) => ChatMessage[];
-  addMessage: (chatId: string, message: Omit<ChatMessage, "id">) => void;
+  addMessage: (
+    chatId: string,
+    message: Pick<ChatMessage, "role" | "content"> & Partial<ChatMessage>
+  ) => void;
   setChatMessages: (chatId: string, messages: ChatMessage[]) => void;
   initChat: (chatId: string, initialMessages?: ChatMessage[]) => void;
 }
@@ -34,6 +37,14 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     const newMessage: ChatMessage = {
       ...message,
       id: generateMessageId(),
+      chat_id: chatId,
+      role: message.role ?? "user",
+      status: message.status ?? "pending",
+      content: message.content ?? "",
+      model_id: message.model_id ?? "",
+      created_at: message.created_at ?? new Date().toISOString(),
+      edited_at: message.edited_at ?? new Date().toISOString(),
+      attachments: message.attachments ?? [],
     };
     set((state) => ({
       chats: {
@@ -54,7 +65,10 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       activeChatId: chatId,
       chats: {
         ...state.chats,
-        [chatId]: initialMessages.length > 0 ? initialMessages : state.chats[chatId] ?? [],
+        [chatId]:
+          initialMessages.length > 0
+            ? initialMessages
+            : (state.chats[chatId] ?? []),
       },
     }));
   },

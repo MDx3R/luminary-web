@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AuthDialog } from "@/components/auth/AuthDialog";
+import { CreateFolderDialog } from "@/components/folder/CreateFolderDialog";
+import { CreateChatDialog } from "@/components/chat/CreateChatDialog";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNavigationStore } from "@/store/useNavigationStore";
 import {
@@ -44,6 +45,8 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   const pathname = usePathname();
   const [authOpen, setAuthOpen] = useState(false);
   const [authDefaultMode, setAuthDefaultMode] = useState<AuthMode>("login");
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [createChatOpen, setCreateChatOpen] = useState(false);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
@@ -85,6 +88,14 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
         onOpenChange={setAuthOpen}
         defaultMode={authDefaultMode}
       />
+      <CreateFolderDialog
+        open={createFolderOpen}
+        onOpenChange={setCreateFolderOpen}
+      />
+      <CreateChatDialog
+        open={createChatOpen}
+        onOpenChange={setCreateChatOpen}
+      />
       <div className="flex min-w-0 flex-1 items-center gap-1">
         {onToggleNavPanel && (
           <Tooltip>
@@ -96,13 +107,15 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
                   className="shrink-0"
                   onClick={onToggleNavPanel}
                   aria-label={
-                    navigationPanelCollapsed ? "Показать панель" : "Скрыть панель"
+                    navigationPanelCollapsed
+                      ? "Показать панель"
+                      : "Скрыть панель"
                   }
                 >
                   {navigationPanelCollapsed ? (
-                    <PanelLeft className="size-4" />
+                    <PanelLeft className="size-5" />
                   ) : (
-                    <PanelLeftClose className="size-4" />
+                    <PanelLeftClose className="size-5" />
                   )}
                 </Button>
               }
@@ -115,13 +128,15 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
         <Tooltip>
           <TooltipTrigger
             render={
-              <Link
-                href="/dashboard"
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0"
+                onClick={() => setCreateChatOpen(true)}
                 aria-label="Новый чат"
-                className="flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
-                <MessageSquarePlus className="size-4" />
-              </Link>
+                <MessageSquarePlus className="size-5" />
+              </Button>
             }
           />
           <TooltipContent side="bottom" sideOffset={4}>
@@ -135,10 +150,10 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
                 variant="ghost"
                 size="icon-sm"
                 className="shrink-0"
-                onClick={() => {}}
+                onClick={() => setCreateFolderOpen(true)}
                 aria-label="Новая папка"
               >
-                <FolderPlus className="size-4" />
+                <FolderPlus className="size-5" />
               </Button>
             }
           />
@@ -156,7 +171,7 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
                 onClick={collapseAllFolders}
                 aria-label="Свернуть все папки"
               >
-                <ChevronsUpDown className="size-4" />
+                <ChevronsUpDown className="size-5" />
               </Button>
             }
           />
@@ -178,9 +193,9 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
                   }
                 >
                   {chatPanelCollapsed ? (
-                    <PanelRight className="size-4" />
+                    <PanelRight className="size-5" />
                   ) : (
-                    <PanelRightClose className="size-4" />
+                    <PanelRightClose className="size-5" />
                   )}
                 </Button>
               }

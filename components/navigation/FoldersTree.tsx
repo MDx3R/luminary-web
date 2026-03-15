@@ -1,6 +1,7 @@
-"use client"
+"use client";
 
-import Link from "next/link"
+import { useState } from "react";
+import Link from "next/link";
 import {
   ChevronRight,
   Plus,
@@ -8,19 +9,22 @@ import {
   FolderOpen,
   MessageSquarePlus,
   FilePlus,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useNavigationStore } from "@/store/useNavigationStore"
-import { useFolderStore } from "@/store/useFolderStore"
-import { useSourcesStore } from "@/store/useSourcesStore"
-import { mockFolders, getMockFolderChats } from "@/lib/mocks"
-import type { Folder } from "@/types/folder"
+} from "@/components/ui/dropdown-menu";
+import { useNavigationStore } from "@/store/useNavigationStore";
+import { useSourcesStore } from "@/store/useSourcesStore";
+import { listFolders } from "@/lib/api/folders-api";
+import { getFolder } from "@/lib/api/folders-api";
+import { queryKeys } from "@/lib/query-keys";
+import { CreateChatDialog } from "@/components/chat/CreateChatDialog";
+import type { FolderSummary } from "@/types/folder";
 
 function FolderRow({
   folder,
@@ -28,16 +32,22 @@ function FolderRow({
   onToggle,
   onAddChat,
   onAddSource,
+  onAddSourceToChat,
 }: {
-  folder: Folder
-  isExpanded: boolean
-  onToggle: () => void
-  onAddChat: () => void
-  onAddSource: () => void
+  folder: FolderSummary;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onAddChat: () => void;
+  onAddSource: () => void;
+  onAddSourceToChat: (chatId: string) => void;
 }) {
-  const chats = getMockFolderChats(folder.id)
-  const getSourcesByFolderId = useSourcesStore((s) => s.getSourcesByFolderId)
-  const sourceCount = getSourcesByFolderId(folder.id).length
+  const { data: folderDetails } = useQuery({
+    queryKey: queryKeys.folder(folder.id),
+    queryFn: () => getFolder(folder.id),
+    enabled: isExpanded,
+  });
+  const chats = folderDetails?.chats ?? [];
+  const sourceCount = folderDetails?.sources?.length ?? 0;
 
   return (
     <div className="group/folder flex flex-col">
@@ -53,7 +63,10 @@ function FolderRow({
           className="flex flex-1 items-center gap-1.5 overflow-hidden text-left outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
         >
           <ChevronRight
-            className={cn("size-4 shrink-0 transition-transform", isExpanded && "rotate-90")}
+            className={cn(
+              "size-4 shrink-0 transition-transform",
+              isExpanded && "rotate-90"
+            )}
           />
           <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate">{folder.name}</span>
@@ -64,35 +77,28 @@ function FolderRow({
           )}
         </button>
         <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover/folder:opacity-100">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-sidebar-accent"
-              aria-label="Добавить в папку"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Plus className="size-3.5" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="right" sideOffset={4}>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  onAddChat()
-                }}
-              >
-                <MessageSquarePlus className="size-3.5" />
-                Добавить чат
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  onAddSource()
-                }}
-              >
-                <FilePlus className="size-3.5" />
-                Добавить источник
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <button
+            type="button"
+            className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-sidebar-accent"
+            aria-label="Добавить чат"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddChat();
+            }}
+          >
+            <MessageSquarePlus className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-sidebar-accent"
+            aria-label="Добавить источник"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddSource();
+            }}
+          >
+            <FilePlus className="size-3.5" />
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger
               className="inline-flex size-6 shrink-0 items-center justify-center rounded hover:bg-sidebar-accent"
@@ -118,47 +124,97 @@ function FolderRow({
       {isExpanded && (
         <div className="ml-4 border-l border-sidebar-border pl-2">
           {chats.map((chat) => (
-            <Link
+            <div
               key={chat.id}
-              href={`/folder/${folder.id}`}
-              className="flex min-h-7 items-center gap-2 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              className="group/chat flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
-              <span className="truncate">{chat.title}</span>
-            </Link>
+              <Link
+                href={`/folder/${folder.id}?chat=${chat.id}`}
+                className="flex min-w-0 flex-1 items-center gap-2"
+              >
+                <span className="truncate">{chat.name}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onAddSourceToChat(chat.id);
+                }}
+                className="inline-flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/chat:opacity-100 hover:bg-sidebar-accent"
+                aria-label="Добавить источник в чат"
+              >
+                <Plus className="size-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export function FoldersTree() {
-  const expandedFolderIds = useNavigationStore((s) => s.expandedFolderIds)
-  const toggleFolderExpanded = useNavigationStore((s) => s.toggleFolderExpanded)
-  const setFolder = useFolderStore((s) => s.setFolder)
-  const setAddSourceModalOpen = useSourcesStore((s) => s.setAddSourceModalOpen)
+  const expandedFolderIds = useNavigationStore((s) => s.expandedFolderIds);
+  const toggleFolderExpanded = useNavigationStore(
+    (s) => s.toggleFolderExpanded
+  );
+  const openAttachModal = useSourcesStore((s) => s.openAttachModal);
+  const [createChatOpen, setCreateChatOpen] = useState(false);
+  const [createChatFolderId, setCreateChatFolderId] = useState<string | null>(
+    null
+  );
 
-  function handleAddSource(folder: Folder) {
-    setFolder(folder)
-    setAddSourceModalOpen(true)
+  const { data: folders = [], isLoading } = useQuery({
+    queryKey: queryKeys.folders,
+    queryFn: listFolders,
+  });
+
+  function handleAddSource(folder: FolderSummary) {
+    openAttachModal({ type: "folder", id: folder.id });
   }
 
-  function handleAddChat(_folder: Folder) {
-    // TODO: create new chat in folder and navigate
+  function handleAddChat(folder: FolderSummary) {
+    setCreateChatFolderId(folder.id);
+    setCreateChatOpen(true);
+  }
+
+  function handleAddSourceToChat(chatId: string) {
+    openAttachModal({ type: "chat", id: chatId });
+  }
+
+  function handleCreateChatOpenChange(open: boolean) {
+    if (!open) setCreateChatFolderId(null);
+    setCreateChatOpen(open);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="py-2 px-2 text-xs text-muted-foreground">
+        Загрузка папок…
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-0.5 py-1">
-      {mockFolders.map((folder) => (
-        <FolderRow
-          key={folder.id}
-          folder={folder}
-          isExpanded={expandedFolderIds.includes(folder.id)}
-          onToggle={() => toggleFolderExpanded(folder.id)}
-          onAddChat={() => handleAddChat(folder)}
-          onAddSource={() => handleAddSource(folder)}
-        />
-      ))}
-    </div>
-  )
+    <>
+      <div className="flex flex-col gap-0.5 py-1">
+        {folders.map((folder) => (
+          <FolderRow
+            key={folder.id}
+            folder={folder}
+            isExpanded={expandedFolderIds.includes(folder.id)}
+            onToggle={() => toggleFolderExpanded(folder.id)}
+            onAddChat={() => handleAddChat(folder)}
+            onAddSource={() => handleAddSource(folder)}
+            onAddSourceToChat={handleAddSourceToChat}
+          />
+        ))}
+      </div>
+      <CreateChatDialog
+        open={createChatOpen}
+        onOpenChange={handleCreateChatOpenChange}
+        folderId={createChatFolderId}
+      />
+    </>
+  );
 }

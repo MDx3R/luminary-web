@@ -1,17 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
+import { useQuery } from "@tanstack/react-query";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useFolderStore } from "@/store/useFolderStore";
 import { useChatStore } from "@/store/useChatStore";
 import { useNavigationStore } from "@/store/useNavigationStore";
-import { mockMessages } from "@/lib/mocks";
+import { getFolder } from "@/lib/api/folders-api";
+import { listMessages } from "@/lib/api/chats-api";
+import { queryKeys } from "@/lib/query-keys";
 
 const CHAT_PANEL_MIN = "25%";
 const CHAT_PANEL_MAX = "35%";
@@ -22,14 +26,60 @@ interface FolderViewProps {
 }
 
 export function FolderView({ folderId }: FolderViewProps) {
-  const initFromFolderId = useFolderStore((s) => s.initFromFolderId);
-  const initChat = useChatStore((s) => s.initChat);
+  const searchParams = useSearchParams();
+  const setFolder = useFolderStore((s) => s.setFolder);
+  const clearFolder = useFolderStore((s) => s.clearFolder);
+  const selectedChatId = useFolderStore((s) => s.selectedChatId);
+  const setSelectedChatId = useFolderStore((s) => s.setSelectedChatId);
+  const setChatMessages = useChatStore((s) => s.setChatMessages);
+  const setActiveChat = useChatStore((s) => s.setActiveChat);
   const chatPanelCollapsed = useNavigationStore((s) => s.chatPanelCollapsed);
 
+  const chatFromUrl = searchParams.get("chat");
+
+  const { data: folder, isLoading: folderLoading } = useQuery({
+    queryKey: queryKeys.folder(folderId),
+    queryFn: () => getFolder(folderId),
+    enabled: Boolean(folderId),
+  });
+
   useEffect(() => {
-    initFromFolderId(folderId);
-    initChat(folderId, mockMessages);
-  }, [folderId, initFromFolderId, initChat]);
+    if (folder) setFolder(folder);
+    return () => clearFolder();
+  }, [folder, setFolder, clearFolder]);
+
+  const effectiveChatId =
+    chatFromUrl ||
+    selectedChatId ||
+    (folder?.chats?.length ? folder.chats[0].id : null);
+
+  useEffect(() => {
+    if (effectiveChatId && effectiveChatId !== selectedChatId)
+      setSelectedChatId(effectiveChatId);
+  }, [effectiveChatId, selectedChatId, setSelectedChatId]);
+
+  const { data: messages } = useQuery({
+    queryKey: queryKeys.messages(effectiveChatId ?? ""),
+    queryFn: () => listMessages(effectiveChatId!),
+    enabled: Boolean(effectiveChatId),
+  });
+
+  useEffect(() => {
+    if (effectiveChatId && messages) {
+      setActiveChat(effectiveChatId);
+      setChatMessages(effectiveChatId, messages);
+    }
+  }, [effectiveChatId, messages, setActiveChat, setChatMessages]);
+
+  if (folderLoading || !folder) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+        <p className="text-sm text-muted-foreground">
+          {folderLoading ? "Загрузка папки…" : "Папка не найдена"}
+        </p>
+      </div>
+    );
+  }
 
   if (chatPanelCollapsed) {
     return (
@@ -55,8 +105,8 @@ export function FolderView({ folderId }: FolderViewProps) {
           maxSize={CHAT_PANEL_MAX}
           className="min-h-0 h-full flex flex-col"
         >
-          <div className="flex min-h-0 flex-1 flex-col">
-            <ChatPanel chatId={folderId} />
+          <div className="min-h-0 flex-1 flex flex-col">
+            <ChatPanel chatId={effectiveChatId} />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

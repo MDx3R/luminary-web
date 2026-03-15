@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileUp, Link as LinkIcon } from "lucide-react";
 import {
   Dialog,
@@ -13,23 +14,72 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFolderStore } from "@/store/useFolderStore";
 import { useSourcesStore } from "@/store/useSourcesStore";
-import type { SourceKind } from "@/types/source";
+import { createFileSource, createLinkSource } from "@/lib/api/sources-api";
+import { addSourceToFolder } from "@/lib/api/folders-api";
+import { addSourceToChat } from "@/lib/api/chats-api";
+import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 
 type Step = "choose" | "file" | "url";
 
 export function AddSourceModal() {
+  const queryClient = useQueryClient();
   const currentFolder = useFolderStore((s) => s.currentFolder);
   const addSourceModalOpen = useSourcesStore((s) => s.addSourceModalOpen);
+  const attachContext = useSourcesStore((s) => s.attachContext);
   const setAddSourceModalOpen = useSourcesStore((s) => s.setAddSourceModalOpen);
-  const addSource = useSourcesStore((s) => s.addSource);
 
   const [step, setStep] = useState<Step>("choose");
   const [urlValue, setUrlValue] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const folderId = currentFolder?.id ?? null;
+  const folderId =
+    attachContext?.type === "folder"
+      ? attachContext.id
+      : currentFolder?.id ?? null;
+  const chatId = attachContext?.type === "chat" ? attachContext.id : null;
+
+  const fileMutation = useMutation({
+    mutationFn: () =>
+      createFileSource(selectedFile!, selectedFile!.name),
+    onSuccess: async (data) => {
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.sources });
+        if (folderId) {
+          await addSourceToFolder(folderId, data.id);
+          queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
+        }
+        if (chatId) {
+          await addSourceToChat(chatId, data.id);
+          queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId) });
+        }
+      }
+      handleClose(false);
+    },
+  });
+
+  const linkMutation = useMutation({
+    mutationFn: () => {
+      const url = urlValue.trim();
+      const title = url.length > 50 ? url.slice(0, 50) + "…" : url;
+      return createLinkSource({ title, url });
+    },
+    onSuccess: async (data) => {
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.sources });
+        if (folderId) {
+          await addSourceToFolder(folderId, data.id);
+          queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
+        }
+        if (chatId) {
+          await addSourceToChat(chatId, data.id);
+          queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId) });
+        }
+      }
+      handleClose(false);
+    },
+  });
 
   function handleClose(open: boolean) {
     if (!open) {
@@ -40,8 +90,8 @@ export function AddSourceModal() {
     }
   }
 
-  function handleChooseKind(kind: SourceKind) {
-    if (kind === "file") setStep("file");
+  function handleChooseKind(k: "file" | "url") {
+    if (k === "file") setStep("file");
     else setStep("url");
   }
 
@@ -51,26 +101,20 @@ export function AddSourceModal() {
   }
 
   function handleAddFile() {
-    if (!folderId || !selectedFile) return;
-    addSource(folderId, "file", {
-      title: selectedFile.name,
-      fileName: selectedFile.name,
-      mimeType: selectedFile.type || undefined,
-    });
-    handleClose(false);
+    if (!selectedFile) return;
+    fileMutation.mutate();
   }
 
   function handleAddUrl() {
-    const url = urlValue.trim();
-    if (!folderId || !url) return;
-    const title =
-      url.length > 50 ? url.slice(0, 50) + "…" : url;
-    addSource(folderId, "url", { title, url });
-    handleClose(false);
+    if (!urlValue.trim()) return;
+    linkMutation.mutate();
   }
 
-  const canAddFile = Boolean(folderId && selectedFile);
-  const canAddUrl = Boolean(folderId && urlValue.trim());
+  const canAddFile = Boolean(selectedFile);
+  const canAddUrl = Boolean(urlValue.trim());
+  const isPending = fileMutation.isPending || linkMutation.isPending;
+
+  if (attachContext) return null;
 
   return (
     <Dialog open={addSourceModalOpen} onOpenChange={handleClose}>
@@ -125,8 +169,11 @@ export function AddSourceModal() {
               >
                 Назад
               </Button>
-              <Button onClick={handleAddFile} disabled={!canAddFile}>
-                Добавить
+              <Button
+                onClick={handleAddFile}
+                disabled={!canAddFile || isPending}
+              >
+                {isPending ? "Загрузка…" : "Добавить"}
               </Button>
             </DialogFooter>
           </div>
@@ -152,8 +199,11 @@ export function AddSourceModal() {
               >
                 Назад
               </Button>
-              <Button onClick={handleAddUrl} disabled={!canAddUrl}>
-                Добавить
+              <Button
+                onClick={handleAddUrl}
+                disabled={!canAddUrl || isPending}
+              >
+                {isPending ? "Добавление…" : "Добавить"}
               </Button>
             </DialogFooter>
           </div>

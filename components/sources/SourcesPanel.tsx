@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
@@ -11,20 +12,35 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useFolderStore } from "@/store/useFolderStore";
 import { useSourcesStore } from "@/store/useSourcesStore";
+import { removeSourceFromFolder } from "@/lib/api/folders-api";
+import { queryKeys } from "@/lib/query-keys";
 import { SourceItem } from "./SourceItem";
 
 export function SourcesPanel() {
+  const queryClient = useQueryClient();
   const currentFolder = useFolderStore((s) => s.currentFolder);
   const sourcesPanelOpen = useSourcesStore((s) => s.sourcesPanelOpen);
   const setSourcesPanelOpen = useSourcesStore((s) => s.setSourcesPanelOpen);
-  const setAddSourceModalOpen = useSourcesStore((s) => s.setAddSourceModalOpen);
-  const getSourcesByFolderId = useSourcesStore((s) => s.getSourcesByFolderId);
+  const openAttachModal = useSourcesStore((s) => s.openAttachModal);
 
   const folderId = currentFolder?.id ?? null;
-  const sources = folderId ? getSourcesByFolderId(folderId) : [];
+  const sources = currentFolder?.sources ?? [];
+
+  const removeMutation = useMutation({
+    mutationFn: (sourceId: string) =>
+      removeSourceFromFolder(folderId!, sourceId),
+    onSuccess: () => {
+      if (folderId)
+        queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
+    },
+  });
 
   function handleAddSource() {
-    setAddSourceModalOpen(true);
+    if (folderId) openAttachModal({ type: "folder", id: folderId });
+  }
+
+  function handleRemove(sourceId: string) {
+    if (folderId) removeMutation.mutate(sourceId);
   }
 
   return (
@@ -39,12 +55,17 @@ export function SourcesPanel() {
             size="sm"
             onClick={handleAddSource}
             className="w-full shrink-0"
+            disabled={!folderId}
           >
             <Plus className="size-4" />
-            Add Source
+            Добавить источник
           </Button>
           <ScrollArea className="flex-1 min-h-0">
-            {sources.length === 0 ? (
+            {!folderId ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Откройте папку, чтобы управлять источниками.
+              </p>
+            ) : sources.length === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">
                 Нет источников. Добавьте файл или ссылку.
               </p>
@@ -52,7 +73,10 @@ export function SourcesPanel() {
               <ul className="flex flex-col gap-2 pb-4">
                 {sources.map((source) => (
                   <li key={source.id}>
-                    <SourceItem source={source} />
+                    <SourceItem
+                      source={source}
+                      onRemove={handleRemove}
+                    />
                   </li>
                 ))}
               </ul>

@@ -1,30 +1,32 @@
-"use client"
+"use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
-import { useNavigationStore } from "@/store/useNavigationStore"
-import { FoldersTree } from "./FoldersTree"
-import { StandaloneChatsList } from "./StandaloneChatsList"
+} from "@/components/ui/accordion";
+import { useNavigationStore } from "@/store/useNavigationStore";
+import { FoldersTree } from "./FoldersTree";
+import { StandaloneChatsList } from "./StandaloneChatsList";
+import { SourcesSectionContent } from "./SourcesSectionContent";
 
 function FilesSectionContent() {
   const expandedAccordionSections = useNavigationStore(
     (s) => s.expandedAccordionSections
-  )
+  );
   const setExpandedAccordionSections = useNavigationStore(
     (s) => s.setExpandedAccordionSections
-  )
+  );
 
   const handleAccordionChange = (value: string | string[]) => {
-    const arr = (
-      Array.isArray(value) ? value : value ? [value] : []
-    ) as ("folders" | "standalone")[]
-    setExpandedAccordionSections(arr)
-  }
+    const arr = (Array.isArray(value) ? value : value ? [value] : []) as (
+      | "folders"
+      | "standalone"
+    )[];
+    setExpandedAccordionSections(arr);
+  };
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -53,20 +55,22 @@ function FilesSectionContent() {
         </Accordion>
       </ScrollArea>
     </div>
-  )
+  );
 }
 
 function PlaceholderSection({ title }: { title: string }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
       <p className="text-sm text-muted-foreground">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground/80">Скоро будет доступно</p>
+      <p className="mt-1 text-xs text-muted-foreground/80">
+        Скоро будет доступно
+      </p>
     </div>
-  )
+  );
 }
 
 export function NavigationPanel() {
-  const activeSection = useNavigationStore((s) => s.activeSection)
+  const activeSection = useNavigationStore((s) => s.activeSection);
 
   return (
     <aside className="flex h-full w-full min-w-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -77,9 +81,7 @@ export function NavigationPanel() {
       {activeSection === "assistants" && (
         <PlaceholderSection title="Библиотека ассистентов" />
       )}
-      {activeSection === "sources" && (
-        <PlaceholderSection title="Источники" />
-      )}
+      {activeSection === "sources" && <SourcesSectionContent />}
     </aside>
-  )
+  );
 }
