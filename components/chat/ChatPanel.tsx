@@ -32,6 +32,8 @@ import type { ChatMessage } from "@/types/chat";
 
 const STREAMING_STATUSES = ["pending", "processing", "streaming"];
 
+const GENERATING_PLACEHOLDER_MIN_MS = 400;
+
 const EMPTY_PROMPTS = [
   "Объясни простыми словами",
   "Напиши краткое резюме",
@@ -111,14 +113,15 @@ export function ChatPanel({
   const abortRef = useRef<AbortController | null>(null);
 
   const activeChatId = useChatStore((s) => s.activeChatId);
-  const getMessages = useChatStore((s) => s.getMessages);
+  const currentChatId = chatId ?? activeChatId;
+  const messages = useChatStore((s) =>
+    currentChatId ? s.getMessages(currentChatId) : []
+  );
   const addMessage = useChatStore((s) => s.addMessage);
   const updateMessage = useChatStore((s) => s.updateMessage);
   const removeMessage = useChatStore((s) => s.removeMessage);
 
   const queryClient = useQueryClient();
-  const currentChatId = chatId ?? activeChatId;
-  const messages = currentChatId ? getMessages(currentChatId) : [];
 
   const { data: chat } = useQuery({
     queryKey: queryKeys.chat(currentChatId ?? ""),
@@ -383,12 +386,36 @@ interface ChatMessageBlockProps {
 
 function ChatMessageBlock({ message }: ChatMessageBlockProps) {
   const isUser = message.role === "user";
-  const isPending =
-    message.role === "assistant" && message.status === "pending";
+  const isGenerating =
+    message.role === "assistant" &&
+    (message.status === "pending" ||
+      message.status === "processing" ||
+      message.status === "streaming");
   const isStreaming =
     message.role === "assistant" && message.status === "streaming";
   const isFailed = message.status === "failed";
   const isCancelled = message.status === "cancelled";
+
+  const generatingStartedAtRef = useRef<number | null>(null);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  useEffect(() => {
+    if (isGenerating) {
+      if (generatingStartedAtRef.current === null) {
+        generatingStartedAtRef.current = Date.now();
+      }
+      const t = setTimeout(
+        () => setMinTimeElapsed(true),
+        GENERATING_PLACEHOLDER_MIN_MS
+      );
+      return () => clearTimeout(t);
+    }
+    generatingStartedAtRef.current = null;
+    queueMicrotask(() => setMinTimeElapsed(false));
+    return undefined;
+  }, [isGenerating]);
+
+  const showPlaceholder = isGenerating && (!message.content || !minTimeElapsed);
 
   return (
     <div
@@ -405,8 +432,10 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
         </span>
       </div>
       <div className="px-3 py-2 prose prose-sm dark:prose-invert max-w-none wrap-break-word">
-        {isPending && <span className="text-muted-foreground">Думаю…</span>}
-        {isStreaming && message.content && (
+        {showPlaceholder && (
+          <span className="text-muted-foreground animate-pulse">Думаю…</span>
+        )}
+        {!showPlaceholder && isStreaming && message.content && (
           <>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
@@ -415,8 +444,7 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
           </>
         )}
         {message.role === "assistant" &&
-          !isPending &&
-          !isStreaming &&
+          !isGenerating &&
           !isFailed &&
           !isCancelled &&
           message.content && (
