@@ -19,6 +19,7 @@ interface ChatState {
     partial: Partial<ChatMessage>
   ) => void;
   setChatMessages: (chatId: string, messages: ChatMessage[]) => void;
+  removeMessage: (chatId: string, messageId: string) => void;
   initChat: (chatId: string, initialMessages?: ChatMessage[]) => void;
 }
 
@@ -74,6 +75,15 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     set((state) => ({
       chats: { ...state.chats, [chatId]: messages },
     }));
+  },
+
+  removeMessage(chatId, messageId) {
+    set((state) => {
+      const list = state.chats[chatId] ?? [];
+      const next = list.filter((m) => m.id !== messageId);
+      if (next.length === list.length) return state;
+      return { chats: { ...state.chats, [chatId]: next } };
+    });
   },
 
   initChat(chatId, initialMessages = []) {

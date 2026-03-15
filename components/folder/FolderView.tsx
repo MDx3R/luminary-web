@@ -66,10 +66,20 @@ export function FolderView({ folderId }: FolderViewProps) {
   });
 
   useEffect(() => {
-    if (effectiveChatId && messages) {
-      setActiveChat(effectiveChatId);
-      setChatMessages(effectiveChatId, messages);
+    if (!effectiveChatId || !messages) return;
+    setActiveChat(effectiveChatId);
+    const current = useChatStore.getState().chats[effectiveChatId] ?? [];
+    const localPending = current.filter(
+      (m) =>
+        m.status === "pending" ||
+        m.status === "streaming" ||
+        m.id.startsWith("pending-")
+    );
+    const merged = [...messages];
+    for (const m of localPending) {
+      if (!merged.some((x) => x.id === m.id)) merged.push(m);
     }
+    setChatMessages(effectiveChatId, merged);
   }, [effectiveChatId, messages, setActiveChat, setChatMessages]);
 
   // Sync URL with first chat when panel is open and URL has no chat param
@@ -105,8 +115,7 @@ export function FolderView({ folderId }: FolderViewProps) {
   }
 
   const hasChats = (folder.chats?.length ?? 0) > 0;
-  const showEditorOnly =
-    !hasChats || chatPanelCollapsed;
+  const showEditorOnly = !hasChats || chatPanelCollapsed;
 
   if (showEditorOnly) {
     return (

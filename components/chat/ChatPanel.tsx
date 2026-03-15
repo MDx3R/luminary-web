@@ -114,6 +114,7 @@ export function ChatPanel({
   const getMessages = useChatStore((s) => s.getMessages);
   const addMessage = useChatStore((s) => s.addMessage);
   const updateMessage = useChatStore((s) => s.updateMessage);
+  const removeMessage = useChatStore((s) => s.removeMessage);
 
   const queryClient = useQueryClient();
   const currentChatId = chatId ?? activeChatId;
@@ -172,16 +173,18 @@ export function ChatPanel({
     if (streaming) return;
 
     setSendError(null);
+    const tempUserId = `pending-user-${Date.now()}`;
+    addMessage(currentChatId, {
+      id: tempUserId,
+      role: "user",
+      content: text,
+      status: "completed",
+    });
     setInputValue("");
 
     try {
       const { id: userMessageId } = await sendMessage(currentChatId, text);
-      addMessage(currentChatId, {
-        id: userMessageId,
-        role: "user",
-        content: text,
-        status: "completed",
-      });
+      updateMessage(currentChatId, tempUserId, { id: userMessageId });
       const tempAssistantId = `pending-${userMessageId}`;
       addMessage(currentChatId, {
         id: tempAssistantId,
@@ -258,6 +261,7 @@ export function ChatPanel({
 
       inputRef.current?.focus();
     } catch (err) {
+      removeMessage(currentChatId, tempUserId);
       const message =
         err instanceof Error ? err.message : "Не удалось отправить сообщение";
       setSendError(message);
