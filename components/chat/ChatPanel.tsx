@@ -32,6 +32,9 @@ import type { ChatMessage } from "@/types/chat";
 
 const STREAMING_STATUSES = ["pending", "processing", "streaming"];
 
+/** Stable empty array for store selector to avoid getSnapshot loop when chat has no messages */
+const EMPTY_MESSAGES: ChatMessage[] = [];
+
 const GENERATING_PLACEHOLDER_MIN_MS = 400;
 
 const EMPTY_PROMPTS = [
@@ -115,7 +118,7 @@ export function ChatPanel({
   const activeChatId = useChatStore((s) => s.activeChatId);
   const currentChatId = chatId ?? activeChatId;
   const messages = useChatStore((s) =>
-    currentChatId ? s.getMessages(currentChatId) : []
+    currentChatId ? (s.chats[currentChatId] ?? EMPTY_MESSAGES) : EMPTY_MESSAGES
   );
   const addMessage = useChatStore((s) => s.addMessage);
   const updateMessage = useChatStore((s) => s.updateMessage);
