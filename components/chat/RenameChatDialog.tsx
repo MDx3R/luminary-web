@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -44,7 +43,6 @@ export function RenameChatDialog({
       if (folderId)
         queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
       onOpenChange(false);
-      toast.success("Чат переименован");
     },
     onError: (err) => {
       setError(
@@ -72,24 +70,32 @@ export function RenameChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm" showCloseButton={true}>
-        <DialogHeader>
+      <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl" showCloseButton={true}>
+        <DialogHeader className="p-5 pb-0">
           <DialogTitle>Переименовать чат</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-5">
           {error && (
-            <p className="text-sm text-destructive mb-2" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {error}
             </p>
           )}
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Название чата"
-            aria-invalid={!!error}
-            className="mb-4"
-          />
-          <DialogFooter className="flex flex-row justify-end gap-2">
+          <div className="grid gap-2">
+            <label htmlFor="rename-chat-name" className="text-sm font-medium">
+              Название
+            </label>
+            <div className="flex justify-center">
+              <Input
+                id="rename-chat-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Название чата"
+                aria-invalid={!!error}
+                className="w-full min-w-0 max-w-[240px]"
+              />
+            </div>
+          </div>
+          <DialogFooter className="p-0 pt-2 flex flex-row justify-end gap-2">
             <Button
               type="button"
               variant="ghost"

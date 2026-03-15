@@ -6,8 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { listFolders } from "@/lib/api/folders-api";
 import { listChats } from "@/lib/api/chats-api";
+import { listAssistants } from "@/lib/api/assistants-api";
 import { queryKeys } from "@/lib/query-keys";
-import { mockAssistants } from "@/lib/mocks";
 import { cn } from "@/lib/utils";
 
 const EMPTY_MESSAGE =
@@ -104,7 +104,25 @@ function JumpBackSection() {
 }
 
 function TopAssistantsSection() {
-  if (mockAssistants.length === 0) {
+  const { data: assistants = [], isLoading } = useQuery({
+    queryKey: queryKeys.assistants,
+    queryFn: listAssistants,
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="flex flex-col border-dashed">
+        <CardContent className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+          <Bot className="size-10 text-muted-foreground/50 animate-pulse" />
+          <p className="mt-2 text-sm text-muted-foreground">
+            Загрузка ассистентов…
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (assistants.length === 0) {
     return (
       <Card className="flex flex-col border-dashed">
         <CardContent className="flex flex-1 flex-col items-center justify-center py-8 text-center">
@@ -126,7 +144,7 @@ function TopAssistantsSection() {
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-2">
-          {mockAssistants.map((a) => (
+          {assistants.map((a) => (
             <button
               key={a.id}
               type="button"

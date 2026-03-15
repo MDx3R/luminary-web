@@ -22,6 +22,8 @@ interface EditorBubbleMenuProps {
 
 function getSelectedText(editor: Editor): string {
   const { from, to } = editor.state.selection;
+  const size = editor.state.doc.content.size;
+  if (from < 0 || to > size || from > to) return "";
   return editor.state.doc.textBetween(from, to, " ");
 }
 
@@ -38,7 +40,14 @@ export function EditorBubbleMenu({ editor, callbacks }: EditorBubbleMenuProps) {
   if (!editor) return null;
 
   return (
-    <BubbleMenu editor={editor}>
+    <BubbleMenu
+      editor={editor}
+      shouldShow={({ state }) => {
+        const { from, to } = state.selection;
+        const size = state.doc.content.size;
+        return from >= 0 && to <= size && from < to;
+      }}
+    >
       <div className="flex min-w-xs flex-col gap-2 rounded-lg border border-border bg-popover p-2 shadow-md">
         <div className="flex items-center gap-0.5">
           <Button

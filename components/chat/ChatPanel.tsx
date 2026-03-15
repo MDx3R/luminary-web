@@ -15,12 +15,18 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "@/store/useChatStore";
 import {
+  getChat,
   sendMessage,
   getMessageResponseStream,
   cancelMessage,
+  changeChatAssistant,
+  removeChatAssistant,
 } from "@/lib/api/chats-api";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { AssistantSelector } from "@/components/assistants/AssistantSelector";
+import { toast } from "sonner";
+import { ApiClientError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/chat";
 
@@ -35,6 +41,8 @@ const EMPTY_PROMPTS = [
 interface ChatPanelProps {
   /** Id чата (например id папки или отдельный chatId). Если не передан, используется активный чат из стора. */
   chatId?: string | null;
+  /** Подпись для селектора ассистента, когда не выбран (например "Ассистент папки" в боковой панели папки). */
+  assistantEmptyLabel?: string;
 }
 
 function isStreaming(status: string): boolean {
@@ -92,7 +100,10 @@ const ChatInput = forwardRef<
   );
 });
 
-export function ChatPanel({ chatId }: ChatPanelProps = {}) {
+export function ChatPanel({
+  chatId,
+  assistantEmptyLabel,
+}: ChatPanelProps = {}) {
   const [inputValue, setInputValue] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -107,6 +118,37 @@ export function ChatPanel({ chatId }: ChatPanelProps = {}) {
   const queryClient = useQueryClient();
   const currentChatId = chatId ?? activeChatId;
   const messages = currentChatId ? getMessages(currentChatId) : [];
+
+  const { data: chat } = useQuery({
+    queryKey: queryKeys.chat(currentChatId ?? ""),
+    queryFn: () => getChat(currentChatId!),
+    enabled: Boolean(currentChatId),
+  });
+
+  const assistantMutation = useMutation({
+    mutationFn: async (assistantId: string | null) => {
+      if (!currentChatId) return;
+      if (assistantId) {
+        await changeChatAssistant(currentChatId, assistantId);
+      } else {
+        await removeChatAssistant(currentChatId);
+      }
+    },
+    onSuccess: (_, assistantId) => {
+      if (!currentChatId) return;
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.chat(currentChatId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.chats });
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof ApiClientError
+          ? err.message
+          : "Не удалось изменить ассистента"
+      );
+    },
+  });
 
   const lastMessage = messages[messages.length - 1];
   const streaming =
@@ -270,7 +312,7 @@ export function ChatPanel({ chatId }: ChatPanelProps = {}) {
       </div>
       <form
         onSubmit={handleSubmit}
-        className="flex shrink-0 flex-col gap-3 border-t border-border bg-background px-4 pt-4 pb-8 min-w-[200px]"
+        className="flex shrink-0 flex-col gap-3 border-t border-border bg-background px-4 pt-4 pb-5 min-w-[200px]"
       >
         {sendError && (
           <p className="text-sm text-destructive" role="alert">
@@ -287,27 +329,43 @@ export function ChatPanel({ chatId }: ChatPanelProps = {}) {
             disabled={!currentChatId || streaming}
             className="border-0 rounded-none rounded-t-lg focus-visible:ring-0 focus-visible:ring-offset-0"
           />
-          <div className="flex justify-end border-t border-border bg-muted/20 px-2 py-1.5 rounded-b-lg">
-            {streaming ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleCancelStream}
-                aria-label="Остановить генерацию"
-              >
-                <Square className="size-4" />
-              </Button>
-            ) : (
-              <Button
-                type="submit"
-                size="icon"
-                aria-label="Отправить"
-                disabled={!currentChatId || !inputValue.trim()}
-              >
-                <SendHorizontal className="size-4" />
-              </Button>
-            )}
+          <div className="flex items-center justify-between gap-2 border-t border-border bg-muted/20 px-2 py-1.5 rounded-b-lg">
+            <div className="flex shrink-0">
+              {currentChatId && (
+                <AssistantSelector
+                  value={chat?.assistant_id ?? null}
+                  valueLabel={chat?.assistant_name ?? null}
+                  onSelect={(id) => assistantMutation.mutate(id)}
+                  emptyLabel={assistantEmptyLabel}
+                  disabled={assistantMutation.isPending}
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                />
+              )}
+            </div>
+            <div className="flex shrink-0">
+              {streaming ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCancelStream}
+                  aria-label="Остановить генерацию"
+                >
+                  <Square className="size-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  size="icon"
+                  aria-label="Отправить"
+                  disabled={!currentChatId || !inputValue.trim()}
+                >
+                  <SendHorizontal className="size-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </form>

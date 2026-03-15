@@ -82,6 +82,8 @@ export const InlineSuggestionExtension = Extension.create({
               | undefined
             if (!pluginState?.suggestion) return null
             const { suggestion, pos } = pluginState
+            const size = state.doc.content.size
+            if (pos < 0 || pos > size) return null
             const widget = Decoration.widget(pos, () => {
               const span = document.createElement("span")
               span.textContent = suggestion
@@ -96,8 +98,10 @@ export const InlineSuggestionExtension = Extension.create({
               view.state
             ) as InlineSuggestionState | undefined
             if (!pluginState?.suggestion) return false
-            event.preventDefault()
             const { suggestion, pos } = pluginState
+            const size = view.state.doc.content.size
+            if (pos < 0 || pos > size) return false
+            event.preventDefault()
             view.dispatch(
               view.state.tr
                 .insertText(suggestion, pos)

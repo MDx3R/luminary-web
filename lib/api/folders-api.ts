@@ -76,6 +76,21 @@ export async function removeSourceFromFolder(
   });
 }
 
+export async function changeFolderAssistant(
+  folderId: string,
+  assistantId: string
+): Promise<void> {
+  return apiFetch<void>(`/folders/${folderId}/assistant`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assistant_id: assistantId }),
+  });
+}
+
+export async function removeFolderAssistant(folderId: string): Promise<void> {
+  return apiFetch<void>(`/folders/${folderId}/assistant`, { method: "DELETE" });
+}
+
 export async function createFolderChat(
   folderId: string,
   payload: {

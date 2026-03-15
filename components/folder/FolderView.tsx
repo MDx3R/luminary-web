@@ -110,7 +110,7 @@ export function FolderView({ folderId }: FolderViewProps) {
 
   if (showEditorOnly) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
         <EditorPanel />
       </div>
     );
@@ -133,7 +133,10 @@ export function FolderView({ folderId }: FolderViewProps) {
           className="min-h-0 h-full flex flex-col"
         >
           <div className="min-h-0 flex-1 flex flex-col">
-            <ChatPanel chatId={effectiveChatId} />
+            <ChatPanel
+              chatId={effectiveChatId}
+              assistantEmptyLabel="Ассистент папки"
+            />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

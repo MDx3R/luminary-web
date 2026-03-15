@@ -59,6 +59,21 @@ export async function updateChatName(
   });
 }
 
+export async function changeChatAssistant(
+  chatId: string,
+  assistantId: string
+): Promise<void> {
+  return apiFetch<void>(`/chats/${chatId}/assistant`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assistant_id: assistantId }),
+  });
+}
+
+export async function removeChatAssistant(chatId: string): Promise<void> {
+  return apiFetch<void>(`/chats/${chatId}/assistant`, { method: "DELETE" });
+}
+
 export async function listMessages(
   chatId: string,
   params?: { limit?: number; before?: string }
@@ -67,9 +82,10 @@ export async function listMessages(
   if (params?.limit != null) search.set("limit", String(params.limit));
   if (params?.before != null) search.set("before", params.before);
   const qs = search.toString();
-  return apiFetch<ChatMessage[]>(
+  const data = await apiFetch<ChatMessage[]>(
     `/chats/${chatId}/messages${qs ? `?${qs}` : ""}`
   );
+  return [...data].reverse();
 }
 
 export async function sendMessage(

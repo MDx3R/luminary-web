@@ -132,6 +132,21 @@
 .prose-editor.ProseMirror {
   @apply min-h-[280px] py-6 leading-relaxed;
 }
+/* Placeholder «Начните писать...» — только когда редактор полностью пустой */
+.prose-editor.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply float-left h-0 pointer-events-none text-muted-foreground;
+}
+/* Placeholder «Какой будет заголовок?» — всегда для пустых заголовков */
+.prose-editor.ProseMirror h1.is-editor-empty:first-child::before,
+.prose-editor.ProseMirror h2.is-editor-empty:first-child::before,
+.prose-editor.ProseMirror h3.is-editor-empty:first-child::before,
+.prose-editor.ProseMirror h1.is-empty::before,
+.prose-editor.ProseMirror h2.is-empty::before,
+.prose-editor.ProseMirror h3.is-empty::before {
+  content: attr(data-placeholder);
+  @apply float-left h-0 pointer-events-none text-muted-foreground;
+}
 .prose-editor.ProseMirror:focus {
   @apply outline-none;
 }
@@ -172,6 +187,20 @@
 }
 .prose-editor.ProseMirror pre code {
   @apply bg-transparent p-0;
+}
+/* Links in editor: visible, underlined, distinct color (not white) */
+.prose-editor.ProseMirror a {
+  @apply text-chart-1 underline underline-offset-2;
+}
+.prose-editor.ProseMirror a:hover {
+  @apply opacity-90;
+}
+/* Links in prose (e.g. chat messages): same */
+.prose a {
+  @apply text-chart-1 underline underline-offset-2;
+}
+.prose a:hover {
+  @apply opacity-90;
 }
 /* Inline suggestion ghost text (Notion/Cursor-style) */
 .inline-suggestion-ghost {

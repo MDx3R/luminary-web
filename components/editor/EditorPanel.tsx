@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { FolderToolbar } from "@/components/folder/FolderToolbar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TiptapEditor } from "./TiptapEditor";
+import { EditorPillBar } from "./EditorPillBar";
 import { useFolderStore } from "@/store/useFolderStore";
 import { updateFolderEditor } from "@/lib/api/folders-api";
 import { ApiClientError } from "@/lib/api-client";
@@ -97,7 +98,7 @@ export function EditorPanel() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <FolderToolbar />
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="flex justify-center px-4 py-4">
           <div className="w-full max-w-[720px] min-w-0">
             <TiptapEditor
@@ -109,6 +110,7 @@ export function EditorPanel() {
           </div>
         </div>
       </ScrollArea>
+      <EditorPillBar />
     </div>
   );
 }

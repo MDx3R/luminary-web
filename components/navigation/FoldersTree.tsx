@@ -245,7 +245,6 @@ export function FoldersTree() {
         clearFolder();
         router.push("/");
       }
-      toast.success("Папка удалена");
     },
     onError: (err) => {
       const msg =
@@ -260,7 +259,6 @@ export function FoldersTree() {
     onSuccess: (_, { folderId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.folders });
-      toast.success("Чат убран из папки");
     },
     onError: (err) => {
       const msg =
