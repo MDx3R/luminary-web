@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { BookMarked, FileUp, Link as LinkIcon } from "lucide-react";
@@ -45,6 +45,8 @@ export function AttachSourceModal() {
   const queryClient = useQueryClient();
   const addSourceModalOpen = useSourcesStore((s) => s.addSourceModalOpen);
   const attachContext = useSourcesStore((s) => s.attachContext);
+  const attachInitialStep = useSourcesStore((s) => s.attachInitialStep);
+  const clearAttachInitialStep = useSourcesStore((s) => s.clearAttachInitialStep);
   const closeAttachModal = useSourcesStore((s) => s.closeAttachModal);
 
   const [step, setStep] = useState<AttachStep>("list");
@@ -63,6 +65,13 @@ export function AttachSourceModal() {
     id: string;
     title: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (addSourceModalOpen && attachInitialStep === "upload") {
+      setStep("upload");
+      clearAttachInitialStep();
+    }
+  }, [addSourceModalOpen, attachInitialStep, clearAttachInitialStep]);
 
   const { data: sources = [], isLoading: sourcesLoading } = useQuery({
     queryKey: queryKeys.sources,
@@ -251,7 +260,7 @@ export function AttachSourceModal() {
     }
   }
 
-  if (!addSourceModalOpen) return null;
+  if (!addSourceModalOpen || !attachContext) return null;
 
   if (step === "upload") {
     return (

@@ -45,6 +45,7 @@ function FilesSectionContent() {
     <div className="flex flex-1 flex-col overflow-hidden">
       <ScrollArea className="flex-1 min-h-0">
         <Accordion
+          multiple
           value={expandedAccordionSections}
           onValueChange={handleAccordionChange}
           className="w-full border-0"

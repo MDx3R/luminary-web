@@ -1,11 +1,11 @@
 import { useAuthStore } from "@/store/useAuthStore";
 
 export function getBaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_URL;
-  if (!url) {
-    throw new Error("NEXT_PUBLIC_API_URL is not set");
-  }
-  return url.replace(/\/$/, "") + "/api/v1";
+  const url = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const base = url.trim().replace(/\/$/, "");
+  // Empty = same origin (e.g. when behind nginx that proxies /api/v1 to backend)
+  if (!base) return "/api/v1";
+  return base + "/api/v1";
 }
 
 export class ApiClientError extends Error {

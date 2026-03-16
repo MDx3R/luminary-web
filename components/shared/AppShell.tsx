@@ -11,6 +11,7 @@ import { Header } from "@/components/shared/Header";
 import { SourcesPanel } from "@/components/sources/SourcesPanel";
 import { AddSourceModal } from "@/components/sources/AddSourceModal";
 import { AttachSourceModal } from "@/components/sources/AttachSourceModal";
+import { SourceStatusPolling } from "@/components/sources/SourceStatusPolling";
 import { useNavigationStore } from "@/store/useNavigationStore";
 
 interface AppShellProps {
@@ -95,6 +96,7 @@ export function AppShell({ children }: AppShellProps) {
           </ResizablePanelGroup>
         )}
       </div>
+      <SourceStatusPolling />
       <SourcesPanel />
       <AddSourceModal />
       <AttachSourceModal />

@@ -25,7 +25,7 @@ export function SourcesPanel() {
   const currentFolder = useFolderStore((s) => s.currentFolder);
   const sourcesPanelOpen = useSourcesStore((s) => s.sourcesPanelOpen);
   const setSourcesPanelOpen = useSourcesStore((s) => s.setSourcesPanelOpen);
-  const openAttachModal = useSourcesStore((s) => s.openAttachModal);
+  const openCreateSourceModal = useSourcesStore((s) => s.openCreateSourceModal);
   const [sourceToRemove, setSourceToRemove] = useState<{
     id: string;
     title: string;
@@ -53,7 +53,7 @@ export function SourcesPanel() {
   });
 
   function handleAddSource() {
-    if (folderId) openAttachModal({ type: "folder", id: folderId });
+    if (folderId) openCreateSourceModal({ type: "folder", id: folderId });
   }
 
   function handleRemove(sourceId: string, sourceTitle: string) {

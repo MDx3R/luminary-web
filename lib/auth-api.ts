@@ -7,11 +7,9 @@ import type {
 import { AuthApiError } from "./api-types";
 
 const getBaseUrl = (): string => {
-  const url = process.env.NEXT_PUBLIC_API_URL;
-  if (!url) {
-    throw new Error("NEXT_PUBLIC_API_URL is not set");
-  }
-  return url.replace(/\/$/, "");
+  const url = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
+  // Empty = same origin (e.g. behind nginx that proxies /auth and /users to backend)
+  return url;
 };
 
 async function handleResponse<T>(res: Response): Promise<T> {
