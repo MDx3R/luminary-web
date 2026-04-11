@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Luminary — Frontend
 
-## Getting Started
+Веб-клиент Luminary на **Next.js** (App Router), **React 19**, **TypeScript**, **Tailwind CSS v4**. UI — **Shadcn** (Base UI), состояние — **Zustand**, данные с бэкенда — **TanStack Query**, редактор — **Tiptap** (Markdown).
 
-First, run the development server:
+## Требования
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Node.js** 20+ (как в `Dockerfile`)
+- **pnpm** — включите Corepack: `corepack enable` (локально pnpm подтянется по версии из lockfile)
+
+## Быстрый старт
+
+1. Перейдите в каталог `frontend`.
+
+2. Скопируйте переменные окружения и при необходимости отредактируйте URL API:
+
+   ```powershell
+   copy .env.example .env.local
+   ```
+
+   - `NEXT_PUBLIC_API_URL` — базовый URL бэкенда **доступный из браузера** (например `http://localhost:8000` в разработке).
+   - `NEXT_PUBLIC_DEFAULT_MODEL_ID` — UUID модели по умолчанию для новых чатов (заглушка до выбора модели в UI).
+
+3. Установите зависимости и запустите dev-сервер:
+
+   ```powershell
+   pnpm install
+   pnpm dev
+   ```
+
+4. Откройте [http://localhost:3000](http://localhost:3000).
+
+## Скрипты
+
+| Команда       | Назначение                                        |
+| ------------- | ------------------------------------------------- |
+| `pnpm dev`    | Режим разработки (hot reload)                     |
+| `pnpm build`  | Production-сборка                                 |
+| `pnpm start`  | Запуск production после `build`                   |
+| `pnpm lint`   | ESLint (`eslint-config-next`), без предупреждений |
+| `pnpm format` | Prettier по проекту                               |
+
+После существенных изменений имеет смысл прогнать `pnpm lint` и `pnpm build`.
+
+## Структура каталогов
+
+- `app/` — маршруты App Router (`/`, `/dashboard`, `/folder/[id]`, `/chat/[id]`, `/login`, `/register`, `/settings`).
+- `components/` — UI и фичи (в т.ч. Shadcn-компоненты).
+- `lib/` — утилиты, клиент API, хелперы.
+- `store/` — Zustand-сторы.
+- `types/` — общие типы TypeScript.
+- `public/` — статика.
+
+## Docker
+
+В корне `frontend` есть **multi-stage** `Dockerfile`: сборка через `pnpm build` с `output: "standalone"` в `next.config.ts`, в runtime — `node server.js` на порту **3000**.
+
+Сборка образа (из каталога `frontend`):
+
+```powershell
+docker build -t luminary-frontend .
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Переменные `NEXT_PUBLIC_*` должны быть заданы на этапе **build**, если они вшиваются в клиентский бандл; для Docker убедитесь, что URL бэкенда корректен для браузера пользователя.
