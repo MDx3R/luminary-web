@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import type { Editor } from "@tiptap/core";
 import { Sparkles, FileText, SpellCheck, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InlineSpinner } from "@/components/shared/InlineSpinner";
+import { cn } from "@/lib/utils";
 
 export interface EditorBubbleMenuCallbacks {
   onAskAI: (selectedText: string) => void;
@@ -30,6 +31,12 @@ function getSelectedText(editor: Editor): string {
   return editor.state.doc.textBetween(from, to, " ");
 }
 
+function preserveSelectionMouseDown(
+  e: React.MouseEvent<HTMLElement>,
+): void {
+  e.preventDefault();
+}
+
 export function EditorBubbleMenu({
   editor,
   callbacks,
@@ -37,67 +44,95 @@ export function EditorBubbleMenu({
 }: EditorBubbleMenuProps) {
   const [comment, setComment] = useState("");
 
+  const bubbleFloatingOptions = useMemo(
+    () => ({
+      placement: "top" as const,
+      offset: 8,
+      flip: { padding: 8 },
+    }),
+    [],
+  );
+
   const handleSendWithComment = useCallback(() => {
     if (!editor || inlineAiBusy) return;
     const selected = getSelectedText(editor);
     callbacks.onAskWithComment(selected, comment.trim());
     setComment("");
+    editor.chain().focus().run();
   }, [editor, comment, callbacks, inlineAiBusy]);
 
   if (!editor) return null;
 
+  const runAiAction = (fn: (text: string) => void) => {
+    const text = getSelectedText(editor);
+    fn(text);
+    editor.chain().focus().run();
+  };
+
   return (
     <BubbleMenu
       editor={editor}
+      options={bubbleFloatingOptions}
       shouldShow={({ state }) => {
         const { from, to } = state.selection;
         const size = state.doc.content.size;
         return from >= 0 && to <= size && from < to;
       }}
     >
-      <div className="flex min-w-xs flex-col gap-2 rounded-lg border border-border bg-popover p-2 shadow-md">
-        {inlineAiBusy ? (
+      <div
+        className={cn(
+          "relative flex min-h-23 min-w-[min(100%,22rem)] max-w-[min(100vw-2rem,32rem)] flex-col gap-2 overflow-hidden rounded-xl border border-border/80 bg-popover/85 p-2 pt-2.5 shadow-2xl ring-1 ring-border/60 backdrop-blur-xl dark:bg-popover/75",
+        )}
+      >
           <div
-            className="flex items-center gap-2 px-2 py-1.5"
-            role="status"
-            aria-busy="true"
-            aria-live="polite"
-          >
-            <InlineSpinner className="size-4 shrink-0 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Генерация…</span>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-0.5">
+            className="pointer-events-none absolute inset-x-2 top-0 h-px rounded-full bg-linear-to-r from-chart-1 via-primary/70 to-chart-2 opacity-90"
+            aria-hidden
+          />
+
+          <div className="relative z-0 flex min-h-0 flex-1 flex-col gap-2">
+            <div
+              className="flex flex-wrap items-center gap-0.5 rounded-lg bg-muted/55 p-0.5 dark:bg-muted/35"
+              data-slot="bubble-toolbar"
+            >
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => callbacks.onAskAI(getSelectedText(editor))}
-                className="gap-1.5"
+                disabled={inlineAiBusy}
+                onMouseDown={preserveSelectionMouseDown}
+                onClick={() => runAiAction((t) => callbacks.onAskAI(t))}
+                className="gap-1.5 text-foreground/90 hover:text-foreground"
               >
-                <Sparkles className="size-3.5" />
+                <Sparkles className="size-3.5 shrink-0" />
                 Ask AI
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => callbacks.onSummarize(getSelectedText(editor))}
-                className="gap-1.5"
+                disabled={inlineAiBusy}
+                onMouseDown={preserveSelectionMouseDown}
+                onClick={() => runAiAction((t) => callbacks.onSummarize(t))}
+                className="gap-1.5 text-foreground/90 hover:text-foreground"
               >
-                <FileText className="size-3.5" />
+                <FileText className="size-3.5 shrink-0" />
                 Summarize
               </Button>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => callbacks.onFixGrammar(getSelectedText(editor))}
-                className="gap-1.5"
+                disabled={inlineAiBusy}
+                onMouseDown={preserveSelectionMouseDown}
+                onClick={() => runAiAction((t) => callbacks.onFixGrammar(t))}
+                className="gap-1.5 text-foreground/90 hover:text-foreground"
               >
-                <SpellCheck className="size-3.5" />
+                <SpellCheck className="size-3.5 shrink-0" />
                 Fix Grammar
               </Button>
             </div>
-            <div className="flex items-center gap-1.5">
+
+            <div className="flex min-h-8 items-center gap-1.5">
               <Input
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
@@ -107,23 +142,40 @@ export function EditorBubbleMenu({
                     handleSendWithComment();
                   }
                 }}
-                placeholder="Добавить комментарий или запрос…"
-                className="min-w-0 flex-1"
+                placeholder="Комментарий или запрос…"
+                className="min-h-8 min-w-0 flex-1 border-border/80 bg-background/80"
                 aria-label="Запрос или комментарий к выделенному тексту"
+                disabled={inlineAiBusy}
               />
               <Button
+                type="button"
                 variant="secondary"
                 size="sm"
+                disabled={inlineAiBusy}
+                onMouseDown={preserveSelectionMouseDown}
                 onClick={handleSendWithComment}
-                className="shrink-0 gap-1.5"
+                className="shrink-0 gap-1.5 border-border/60 bg-secondary/90 shadow-sm"
                 aria-label="Отправить запрос"
               >
-                <Send className="size-3.5" />
+                <Send className="size-3.5 shrink-0" />
                 Send
               </Button>
             </div>
-          </>
-        )}
+          </div>
+
+          {inlineAiBusy ? (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-[inherit] bg-popover/75 px-3 backdrop-blur-md dark:bg-popover/65"
+              role="status"
+              aria-busy="true"
+              aria-live="polite"
+            >
+              <InlineSpinner className="size-4 shrink-0 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">
+                Генерация…
+              </span>
+            </div>
+          ) : null}
       </div>
     </BubbleMenu>
   );
