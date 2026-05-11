@@ -47,7 +47,6 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       role: message.role ?? "user",
       status: message.status ?? "pending",
       content: message.content ?? "",
-      model_id: message.model_id ?? "",
       created_at: message.created_at ?? new Date().toISOString(),
       edited_at: message.edited_at ?? new Date().toISOString(),
       attachments: message.attachments ?? [],

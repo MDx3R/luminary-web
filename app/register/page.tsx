@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export default function RegisterPage() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/?auth=register", { scroll: false });
+    router.replace("/dashboard?auth=register", { scroll: false });
   }, [router]);
   return null;
 }

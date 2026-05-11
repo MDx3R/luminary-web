@@ -1,6 +1,7 @@
 import { Extension } from "@tiptap/core"
 import { Plugin, PluginKey } from "@tiptap/pm/state"
 import { Decoration, DecorationSet } from "@tiptap/pm/view"
+import type { Node as PMNode } from "@tiptap/pm/model"
 import { getInlineSuggestion } from "@/lib/editor/inline-suggestion"
 
 const INLINE_SUGGESTION_DEBOUNCE_MS = 400
@@ -14,11 +15,13 @@ export const inlineSuggestionPluginKey = new PluginKey<InlineSuggestionState>(
   "inlineSuggestion"
 )
 
-function getTextBeforeCursor(
-  doc: { textBetween: (from: number, to: number, blockSeparator?: string) => string },
-  cursorPos: number
-): string {
+function getTextBeforeCursor(doc: PMNode, cursorPos: number): string {
   return doc.textBetween(0, cursorPos, "\n")
+}
+
+function getTextAfterCursor(doc: PMNode, cursorPos: number): string {
+  const end = doc.content.size
+  return doc.textBetween(cursorPos, end, "\n")
 }
 
 export const InlineSuggestionExtension = Extension.create({
@@ -27,26 +30,35 @@ export const InlineSuggestionExtension = Extension.create({
   addProseMirrorPlugins() {
     const editor = this.editor
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    let inflightAbort: AbortController | null = null
 
-    function scheduleFetch(state: import("@tiptap/pm/state").EditorState) {
+    function scheduleFetch() {
       if (debounceTimer) clearTimeout(debounceTimer)
+      inflightAbort?.abort()
       debounceTimer = setTimeout(() => {
         debounceTimer = null
+        const { view } = editor
+        if (!view) return
+        const state = view.state
         const { doc, selection } = state
         const pos = selection.from
         const textBeforeCursor = getTextBeforeCursor(doc, pos)
-        getInlineSuggestion({ textBeforeCursor })
+        const textAfterCursor = getTextAfterCursor(doc, pos)
+        inflightAbort = new AbortController()
+        const signal = inflightAbort.signal
+        getInlineSuggestion({ textBeforeCursor, textAfterCursor }, signal)
           .then((suggestion) => {
+            if (signal.aborted) return
             if (suggestion == null) return
-            const { view } = editor
-            if (!view) return
-            const currentPos = view.state.selection.from
+            const v = editor.view
+            if (!v) return
+            const currentPos = v.state.selection.from
             if (currentPos !== pos) return
-            const tr = view.state.tr.setMeta(inlineSuggestionPluginKey, {
+            const tr = v.state.tr.setMeta(inlineSuggestionPluginKey, {
               suggestion,
               pos,
             })
-            view.dispatch(tr)
+            v.dispatch(tr)
           })
           .catch(() => {})
       }, INLINE_SUGGESTION_DEBOUNCE_MS)
@@ -110,11 +122,11 @@ export const InlineSuggestionExtension = Extension.create({
             return true
           },
         },
-        appendTransaction(transactions, _oldState, state) {
-          const docChanged = transactions.some((tr) => tr.docChanged)
-          if (docChanged || state.selection.from !== state.selection.to) {
-            scheduleFetch(state)
-          }
+        appendTransaction(transactions) {
+          const shouldSchedule = transactions.some(
+            (tr) => tr.docChanged || tr.selectionSet
+          )
+          if (shouldSchedule) scheduleFetch()
           return null
         },
       }),

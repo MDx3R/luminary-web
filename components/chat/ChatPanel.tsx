@@ -8,7 +8,10 @@ import {
   forwardRef,
   type ComponentProps,
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SendHorizontal, Square } from "lucide-react";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
@@ -109,12 +112,17 @@ export function ChatPanel({
   chatId,
   assistantEmptyLabel,
 }: ChatPanelProps = {}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [inputValue, setInputValue] = useState("");
+  const [sending, setSending] = useState(false);
+  const showSendBusy = useMinimumPending(sending);
   const [sendError, setSendError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const isSubmittingRef = useRef(false);
+  const initialQueryFromUrlHandledRef = useRef(false);
 
   const activeChatId = useChatStore((s) => s.activeChatId);
   const currentChatId = chatId ?? activeChatId;
@@ -142,7 +150,7 @@ export function ChatPanel({
         await removeChatAssistant(currentChatId);
       }
     },
-    onSuccess: (_, assistantId) => {
+    onSuccess: () => {
       if (!currentChatId) return;
       queryClient.invalidateQueries({
         queryKey: queryKeys.chat(currentChatId),
@@ -172,6 +180,142 @@ export function ChatPanel({
     scrollToBottom();
   }, [messages.length, lastMessage?.content, scrollToBottom]);
 
+  useEffect(() => {
+    initialQueryFromUrlHandledRef.current = false;
+  }, [currentChatId]);
+
+  const sendMessageText = useCallback(
+    async (rawText: string) => {
+      const text = rawText.trim();
+      if (!text) return;
+
+      const cid = chatId ?? useChatStore.getState().activeChatId;
+      if (!cid) return;
+
+      const msgs = useChatStore.getState().chats[cid] ?? [];
+      const last = msgs[msgs.length - 1];
+      if (last?.role === "assistant" && isStreaming(last.status)) return;
+
+      setSending(true);
+      setSendError(null);
+      const tempUserId = `pending-user-${Date.now()}`;
+      addMessage(cid, {
+        id: tempUserId,
+        role: "user",
+        content: text,
+        status: "completed",
+      });
+
+      try {
+        const { id: userMessageId } = await sendMessage(cid, text);
+        updateMessage(cid, tempUserId, { id: userMessageId });
+        const tempAssistantId = `pending-${userMessageId}`;
+        addMessage(cid, {
+          id: tempAssistantId,
+          role: "assistant",
+          content: "",
+          status: "pending",
+        });
+
+        const controller = new AbortController();
+        abortRef.current = controller;
+        let accumulated = "";
+        let currentAssistantId = tempAssistantId;
+
+        try {
+          for await (const event of getMessageResponseStream(
+            cid,
+            userMessageId,
+            controller.signal
+          )) {
+            if (event.state === "start") {
+              const newId =
+                typeof event.message_id === "string"
+                  ? event.message_id
+                  : String(event.message_id);
+              updateMessage(cid, tempAssistantId, {
+                id: newId,
+                status: event.status || "streaming",
+              });
+              currentAssistantId = newId;
+              continue;
+            }
+            if (event.state === "delta") {
+              accumulated += event.content;
+              updateMessage(cid, currentAssistantId, {
+                content: accumulated,
+                status: event.status || "streaming",
+              });
+              continue;
+            }
+            if (event.state === "end") {
+              updateMessage(cid, currentAssistantId, {
+                status: "completed",
+              });
+              break;
+            }
+            if (event.state === "error") {
+              updateMessage(cid, currentAssistantId, {
+                status: "failed",
+                content: event.content || "Ошибка генерации",
+              });
+              break;
+            }
+          }
+        } catch (err) {
+          if ((err as Error).name === "AbortError") {
+            updateMessage(cid, currentAssistantId, {
+              status: "cancelled",
+            });
+          } else {
+            updateMessage(cid, currentAssistantId, {
+              status: "failed",
+              content:
+                err instanceof Error
+                  ? err.message
+                  : "Ошибка при получении ответа",
+            });
+          }
+        } finally {
+          abortRef.current = null;
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.messages(cid),
+          });
+        }
+
+        inputRef.current?.focus();
+      } catch (err) {
+        removeMessage(cid, tempUserId);
+        const message =
+          err instanceof Error ? err.message : "Не удалось отправить сообщение";
+        setSendError(message);
+        inputRef.current?.focus();
+      } finally {
+        setSending(false);
+      }
+    },
+    [chatId, addMessage, updateMessage, removeMessage, queryClient]
+  );
+
+  useEffect(() => {
+    if (!currentChatId || initialQueryFromUrlHandledRef.current) return;
+    const q = searchParams.get("q")?.trim();
+    if (!q) return;
+
+    initialQueryFromUrlHandledRef.current = true;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("q");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    void sendMessageText(q);
+  }, [
+    currentChatId,
+    pathname,
+    router,
+    searchParams,
+    sendMessageText,
+  ]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!currentChatId) return;
@@ -179,103 +323,8 @@ export function ChatPanel({
     if (!text) return;
     if (streaming) return;
 
-    setSendError(null);
-    const tempUserId = `pending-user-${Date.now()}`;
-    addMessage(currentChatId, {
-      id: tempUserId,
-      role: "user",
-      content: text,
-      status: "completed",
-    });
     setInputValue("");
-
-    try {
-      const { id: userMessageId } = await sendMessage(currentChatId, text);
-      updateMessage(currentChatId, tempUserId, { id: userMessageId });
-      const tempAssistantId = `pending-${userMessageId}`;
-      addMessage(currentChatId, {
-        id: tempAssistantId,
-        role: "assistant",
-        content: "",
-        status: "pending",
-      });
-
-      const controller = new AbortController();
-      abortRef.current = controller;
-      let accumulated = "";
-      let currentAssistantId = tempAssistantId;
-
-      try {
-        for await (const event of getMessageResponseStream(
-          currentChatId,
-          userMessageId,
-          controller.signal
-        )) {
-          if (event.state === "start") {
-            const newId =
-              typeof event.message_id === "string"
-                ? event.message_id
-                : String(event.message_id);
-            updateMessage(currentChatId, tempAssistantId, {
-              id: newId,
-              status: event.status || "streaming",
-            });
-            currentAssistantId = newId;
-            continue;
-          }
-          if (event.state === "delta") {
-            accumulated += event.content;
-            updateMessage(currentChatId, currentAssistantId, {
-              content: accumulated,
-              status: event.status || "streaming",
-            });
-            continue;
-          }
-          if (event.state === "end") {
-            updateMessage(currentChatId, currentAssistantId, {
-              status: "completed",
-            });
-            break;
-          }
-          if (event.state === "error") {
-            updateMessage(currentChatId, currentAssistantId, {
-              status: "failed",
-              content: event.content || "Ошибка генерации",
-            });
-            break;
-          }
-        }
-      } catch (err) {
-        if ((err as Error).name === "AbortError") {
-          updateMessage(currentChatId, currentAssistantId, {
-            status: "cancelled",
-          });
-        } else {
-          updateMessage(currentChatId, currentAssistantId, {
-            status: "failed",
-            content:
-              err instanceof Error
-                ? err.message
-                : "Ошибка при получении ответа",
-          });
-        }
-      } finally {
-        abortRef.current = null;
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.messages(currentChatId),
-        });
-      }
-
-      inputRef.current?.focus();
-    } catch (err) {
-      removeMessage(currentChatId, tempUserId);
-      const message =
-        err instanceof Error ? err.message : "Не удалось отправить сообщение";
-      setSendError(message);
-      inputRef.current?.focus();
-    } finally {
-      isSubmittingRef.current = false;
-    }
+    await sendMessageText(text);
   }
 
   function handleCancelStream() {
@@ -308,6 +357,7 @@ export function ChatPanel({
                       className="text-muted-foreground"
                       onClick={() => setInputValue(prompt)}
                       aria-label={`Подсказка: ${prompt}`}
+                      disabled={showSendBusy}
                     >
                       {prompt}
                     </Button>
@@ -337,9 +387,16 @@ export function ChatPanel({
             ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || e.shiftKey) return;
+              if (e.nativeEvent.isComposing) return;
+              if (!currentChatId || streaming || showSendBusy) return;
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }}
             placeholder="Сообщение…"
             aria-label="Ввод сообщения"
-            disabled={!currentChatId || streaming}
+            disabled={!currentChatId || streaming || showSendBusy}
             className="border-0 rounded-none rounded-t-lg focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <div className="flex items-center justify-between gap-2 border-t border-border bg-muted/20 px-2 py-1.5 rounded-b-lg">
@@ -350,7 +407,7 @@ export function ChatPanel({
                   valueLabel={chat?.assistant_name ?? null}
                   onSelect={(id) => assistantMutation.mutate(id)}
                   emptyLabel={assistantEmptyLabel}
-                  disabled={assistantMutation.isPending}
+                  disabled={assistantMutation.isPending || showSendBusy}
                   variant="ghost"
                   size="sm"
                   className="shrink-0"
@@ -373,9 +430,15 @@ export function ChatPanel({
                   type="submit"
                   size="icon"
                   aria-label="Отправить"
-                  disabled={!currentChatId || !inputValue.trim()}
+                  disabled={
+                    !currentChatId || !inputValue.trim() || showSendBusy
+                  }
                 >
-                  <SendHorizontal className="size-4" />
+                  {showSendBusy ? (
+                    <InlineSpinner className="size-4" />
+                  ) : (
+                    <SendHorizontal className="size-4" />
+                  )}
                 </Button>
               )}
             </div>

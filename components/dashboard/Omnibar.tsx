@@ -5,20 +5,38 @@ import { useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { createChat } from "@/lib/api/chats-api";
+import { ApiClientError } from "@/lib/api-client";
+import { toast } from "sonner";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 const PLACEHOLDER = "Начни исследование или задай вопрос...";
 
 export function Omnibar() {
   const router = useRouter();
   const [value, setValue] = useState("");
+  const [creating, setCreating] = useState(false);
+  const showCreating = useMinimumPending(creating);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const query = value.trim();
-    if (!query) return;
-    const newId = crypto.randomUUID();
-    router.push(`/chat/${newId}?q=${encodeURIComponent(query)}`);
+    if (!query || creating) return;
+    setCreating(true);
+    try {
+      const { id } = await createChat({ name: null });
+      router.push(`/chat/${id}?q=${encodeURIComponent(query)}`);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiClientError
+          ? err.message
+          : "Не удалось создать чат."
+      );
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -26,13 +44,20 @@ export function Omnibar() {
       onSubmit={handleSubmit}
       className="flex w-full max-w-2xl items-center gap-2 rounded-xl border-2 border-border bg-background px-4 py-3 shadow-sm transition-colors focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20"
     >
-      <Search className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+      <span className="relative flex size-5 shrink-0 items-center justify-center text-muted-foreground">
+        {showCreating ? (
+          <InlineSpinner className="size-5" />
+        ) : (
+          <Search className="size-5" aria-hidden />
+        )}
+      </span>
       <Input
         ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={PLACEHOLDER}
+        disabled={creating || showCreating}
         className={cn(
           "flex-1 border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground",
           "dark:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"

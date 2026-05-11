@@ -15,6 +15,8 @@ import { Bot } from "lucide-react";
 import { createAssistant } from "@/lib/api/assistants-api";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiClientError } from "@/lib/api-client";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 interface CreateAssistantModalProps {
   open: boolean;
@@ -54,6 +56,8 @@ export function CreateAssistantModal({
       );
     },
   });
+
+  const showPending = useMinimumPending(mutation.isPending);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,6 +109,7 @@ export function CreateAssistantModal({
               placeholder="Название ассистента"
               autoFocus
               aria-invalid={!!error}
+              disabled={showPending}
             />
           </div>
           <div className="grid gap-2">
@@ -119,6 +124,7 @@ export function CreateAssistantModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Краткое описание"
+              disabled={showPending}
             />
           </div>
           <div className="grid gap-2">
@@ -135,6 +141,7 @@ export function CreateAssistantModal({
               placeholder="Системный промпт для ассистента"
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               rows={3}
+              disabled={showPending}
             />
           </div>
           <DialogFooter className="p-0 pt-2 flex flex-row justify-end gap-2">
@@ -142,11 +149,19 @@ export function CreateAssistantModal({
               type="button"
               variant="ghost"
               onClick={() => handleOpenChange(false)}
+              disabled={showPending}
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Создание…" : "Создать"}
+            <Button type="submit" disabled={showPending}>
+              {showPending ? (
+                <span className="inline-flex items-center gap-2">
+                  <InlineSpinner className="size-3.5" />
+                  Создание…
+                </span>
+              ) : (
+                "Создать"
+              )}
             </Button>
           </DialogFooter>
         </form>

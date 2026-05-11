@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { BookMarked, FileUp, Link as LinkIcon } from "lucide-react";
@@ -35,6 +35,8 @@ import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { RenameSourceDialog } from "@/components/sources/RenameSourceDialog";
 import { SourceItem } from "@/components/sources/SourceItem";
 import { ApiClientError } from "@/lib/api-client";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Source } from "@/types/source";
 
@@ -53,6 +55,7 @@ export function AttachSourceModal() {
   const [uploadKind, setUploadKind] = useState<UploadKind>("choose");
   const [urlValue, setUrlValue] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [sourceToRemove, setSourceToRemove] = useState<{
     sourceId: string;
     sourceTitle: string;
@@ -68,8 +71,10 @@ export function AttachSourceModal() {
 
   useEffect(() => {
     if (addSourceModalOpen && attachInitialStep === "upload") {
-      setStep("upload");
-      clearAttachInitialStep();
+      queueMicrotask(() => {
+        setStep("upload");
+        clearAttachInitialStep();
+      });
     }
   }, [addSourceModalOpen, attachInitialStep, clearAttachInitialStep]);
 
@@ -78,6 +83,7 @@ export function AttachSourceModal() {
     queryFn: listSources,
     enabled: addSourceModalOpen,
   });
+  const showSourcesLoading = useMinimumPending(sourcesLoading);
 
   const folderId =
     attachContext?.type === "folder" ? attachContext.id : null;
@@ -303,19 +309,35 @@ export function AttachSourceModal() {
             {uploadKind === "file" && (
               <div className="flex flex-col gap-4">
                 <input
+                  ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.txt"
                   onChange={(e) =>
                     setSelectedFile(e.target.files?.[0] ?? null)
                   }
-                  className="text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground file:text-sm"
-                  aria-label="Выберите файл"
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-label="Выберите файл с устройства"
                 />
-                {selectedFile && (
-                  <p className="text-sm text-muted-foreground">
-                    Выбран: {selectedFile.name}
-                  </p>
-                )}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-fit"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadPending}
+                  >
+                    Выбрать файл
+                  </Button>
+                  {selectedFile ? (
+                    <p className="text-sm text-muted-foreground truncate">
+                      {selectedFile.name}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Файл не выбран
+                    </p>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -381,10 +403,10 @@ export function AttachSourceModal() {
         </DialogHeader>
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col items-center p-5 pt-4">
-            {sourcesLoading ? (
-              <p className="py-4 text-sm text-muted-foreground">
-                Загрузка источников…
-              </p>
+            {showSourcesLoading ? (
+              <div className="py-4">
+                <ListLoadingRow label="Загрузка источников…" className="text-sm" />
+              </div>
             ) : (
               <>
                 <ul className="flex w-full max-w-[280px] flex-col gap-2">

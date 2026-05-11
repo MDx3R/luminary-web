@@ -9,16 +9,35 @@ import { listChats } from "@/lib/api/chats-api";
 import { listAssistants } from "@/lib/api/assistants-api";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
+import { useNavigationStore } from "@/store/useNavigationStore";
+import { useAssistantsUiStore } from "@/store/useAssistantsUiStore";
 
 const EMPTY_MESSAGE =
   "Твоя база знаний пуста. Создай папку и загрузи первый документ.";
 
 function RecentWorkSection() {
-  const { data: folders = [] } = useQuery({
+  const { data: folders = [], isLoading } = useQuery({
     queryKey: queryKeys.folders,
     queryFn: listFolders,
   });
+  const showFoldersLoading = useMinimumPending(isLoading);
   const recentFolders = folders.slice(0, 4);
+
+  if (showFoldersLoading) {
+    return (
+      <Card className="flex flex-col border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Недавние папки</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
+          <InlineSpinner className="size-10 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Загрузка папок…</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (recentFolders.length === 0) {
     return (
@@ -57,11 +76,26 @@ function RecentWorkSection() {
 }
 
 function JumpBackSection() {
-  const { data: chats = [] } = useQuery({
+  const { data: chats = [], isLoading } = useQuery({
     queryKey: queryKeys.chats,
     queryFn: listChats,
   });
+  const showChatsLoading = useMinimumPending(isLoading);
   const recentChats = chats.slice(0, 5);
+
+  if (showChatsLoading) {
+    return (
+      <Card className="flex flex-col border-dashed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Вернуться к чатам</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
+          <InlineSpinner className="size-10 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Загрузка чатов…</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (recentChats.length === 0) {
     return (
@@ -104,17 +138,33 @@ function JumpBackSection() {
 }
 
 function TopAssistantsSection() {
+  const openAssistantEditor = useAssistantsUiStore((s) => s.openAssistantEditor);
+  const setActiveSection = useNavigationStore((s) => s.setActiveSection);
+  const navigationPanelCollapsed = useNavigationStore(
+    (s) => s.navigationPanelCollapsed
+  );
+  const toggleNavigationCollapsed = useNavigationStore(
+    (s) => s.toggleNavigationCollapsed
+  );
+
   const { data: assistants = [], isLoading } = useQuery({
     queryKey: queryKeys.assistants,
     queryFn: listAssistants,
   });
+  const showAssistantsLoading = useMinimumPending(isLoading);
 
-  if (isLoading) {
+  function openAssistantFromDashboard(assistantId: string) {
+    openAssistantEditor(assistantId);
+    setActiveSection("assistants");
+    if (navigationPanelCollapsed) toggleNavigationCollapsed();
+  }
+
+  if (showAssistantsLoading) {
     return (
       <Card className="flex flex-col border-dashed">
-        <CardContent className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-          <Bot className="size-10 text-muted-foreground/50 animate-pulse" />
-          <p className="mt-2 text-sm text-muted-foreground">
+        <CardContent className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
+          <InlineSpinner className="size-10 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">
             Загрузка ассистентов…
           </p>
         </CardContent>
@@ -148,13 +198,15 @@ function TopAssistantsSection() {
             <button
               key={a.id}
               type="button"
+              onClick={() => openAssistantFromDashboard(a.id)}
               className={cn(
-                "flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors",
+                "flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-left text-sm transition-colors",
                 "hover:bg-accent hover:text-accent-foreground"
               )}
+              aria-label={`Редактировать ассистента: ${a.name}`}
             >
               <Bot className="size-4 shrink-0 text-muted-foreground" />
-              <span>{a.name}</span>
+              <span className="truncate">{a.name}</span>
             </button>
           ))}
         </div>

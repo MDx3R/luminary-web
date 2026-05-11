@@ -16,6 +16,8 @@ import { FolderPlus } from "lucide-react";
 import { createFolder } from "@/lib/api/folders-api";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiClientError } from "@/lib/api-client";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 interface CreateFolderDialogProps {
   open: boolean;
@@ -57,6 +59,8 @@ export function CreateFolderDialog({
       );
     },
   });
+
+  const showPending = useMinimumPending(mutation.isPending);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -104,6 +108,7 @@ export function CreateFolderDialog({
               placeholder="Название папки"
               autoFocus
               aria-invalid={!!error}
+              disabled={showPending}
             />
           </div>
           <div className="grid gap-2">
@@ -118,6 +123,7 @@ export function CreateFolderDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Краткое описание"
+              disabled={showPending}
             />
           </div>
           <DialogFooter className="p-0 pt-2 flex flex-row justify-end gap-2">
@@ -125,11 +131,19 @@ export function CreateFolderDialog({
               type="button"
               variant="ghost"
               onClick={() => handleOpenChange(false)}
+              disabled={showPending}
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Создание…" : "Создать"}
+            <Button type="submit" disabled={showPending}>
+              {showPending ? (
+                <span className="inline-flex items-center gap-2">
+                  <InlineSpinner className="size-3.5" />
+                  Создание…
+                </span>
+              ) : (
+                "Создать"
+              )}
             </Button>
           </DialogFooter>
         </form>

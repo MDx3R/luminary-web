@@ -1,5 +1,5 @@
-import { apiFetch, getBaseUrl } from "@/lib/api-client";
-import { useAuthStore } from "@/store/useAuthStore";
+import { apiFetch } from "@/lib/api-client";
+import { postJsonSseStream } from "@/lib/sse-stream";
 import type { Chat, ChatSummary, ChatMessage, StreamingMessageEvent } from "@/types/chat";
 import type { IDResponse } from "@/lib/api-types";
 
@@ -14,8 +14,6 @@ export async function getChat(id: string): Promise<Chat> {
 export async function createChat(payload: {
   name?: string | null;
   assistant_id?: string | null;
-  model_id: string;
-  max_context_messages: number;
 }): Promise<IDResponse> {
   return apiFetch<IDResponse>("/chats", {
     method: "POST",
@@ -118,57 +116,9 @@ export async function* getMessageResponseStream(
   messageId: string,
   signal?: AbortSignal
 ): AsyncGenerator<StreamingMessageEvent> {
-  const base = getBaseUrl();
-  const url = `${base}/chats/${chatId}/messages/${messageId}/response`;
-  const token = useAuthStore.getState().accessToken;
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    credentials: "include",
-    signal,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    let message = `Ошибка запроса: ${res.status}`;
-    try {
-      if (text) {
-        const detail = JSON.parse(text) as { message?: string };
-        if (typeof detail.message === "string") message = detail.message;
-      }
-    } catch {
-      // use default message
-    }
-    throw new Error(message);
-  }
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("No response body");
-  const decoder = new TextDecoder();
-  let buffer = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const parts = buffer.split("\n\n");
-      buffer = parts.pop() ?? "";
-      for (const part of parts) {
-        const line = part.split("\n").find((l) => l.startsWith("data: "));
-        if (!line) continue;
-        const raw = line.slice(6).trim();
-        if (raw === "[DONE]" || !raw) continue;
-        try {
-          const event = JSON.parse(raw) as StreamingMessageEvent;
-          yield event;
-        } catch {
-          // skip malformed
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
+  yield* postJsonSseStream(
+    `/chats/${chatId}/messages/${messageId}/response`,
+    {},
+    signal
+  );
 }

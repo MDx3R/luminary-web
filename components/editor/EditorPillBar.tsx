@@ -2,17 +2,21 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileDown, BookMarked } from "lucide-react";
+import { FileDown, BookMarked, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFolderStore } from "@/store/useFolderStore";
 import { useSourcesStore } from "@/store/useSourcesStore";
 import {
   changeFolderAssistant,
   removeFolderAssistant,
+  addSourceToFolder,
 } from "@/lib/api/folders-api";
+import { createFileSource } from "@/lib/api/sources-api";
 import { queryKeys } from "@/lib/query-keys";
 import { AssistantSelector } from "@/components/assistants/AssistantSelector";
 import { ApiClientError } from "@/lib/api-client";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 export function EditorPillBar() {
   const queryClient = useQueryClient();
@@ -29,7 +33,7 @@ export function EditorPillBar() {
       }
       await removeFolderAssistant(currentFolder.id);
     },
-    onSuccess: (assistantId) => {
+    onSuccess: () => {
       if (!currentFolder?.id) return;
       queryClient.invalidateQueries({
         queryKey: queryKeys.folder(currentFolder.id),
@@ -44,6 +48,45 @@ export function EditorPillBar() {
       );
     },
   });
+
+  const saveEditorAsSourceMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentFolder?.id) throw new Error("NO_FOLDER");
+      const text = pendingEditorText ?? currentFolder.editor?.text ?? "";
+      if (!text.trim()) throw new Error("EMPTY");
+      const base = (currentFolder.name ?? "document").replace(
+        /[^\p{L}\p{N}\s_-]/gu,
+        "_"
+      );
+      const file = new File([text], `${base}.md`, {
+        type: "text/markdown;charset=utf-8",
+      });
+      const { id: sourceId } = await createFileSource(file, `${base}.md`);
+      await addSourceToFolder(currentFolder.id, sourceId);
+    },
+    onSuccess: () => {
+      if (!currentFolder?.id) return;
+      queryClient.invalidateQueries({ queryKey: queryKeys.sources });
+      queryClient.invalidateQueries({ queryKey: queryKeys.folder(currentFolder.id) });
+      toast.success("Документ добавлен в источники папки");
+    },
+    onError: (err) => {
+      if (err instanceof Error && err.message === "EMPTY") {
+        toast.error("Нет текста для сохранения.");
+        return;
+      }
+      toast.error(
+        err instanceof ApiClientError
+          ? err.message
+          : "Не удалось сохранить как источник"
+      );
+    },
+  });
+
+  const showAssistantPending = useMinimumPending(assistantMutation.isPending);
+  const showSaveSourcePending = useMinimumPending(
+    saveEditorAsSourceMutation.isPending
+  );
 
   const exportContent = pendingEditorText ?? currentFolder?.editor?.text ?? "";
 
@@ -75,7 +118,7 @@ export function EditorPillBar() {
             value={currentFolder.assistant_id ?? null}
             valueLabel={currentFolder.assistant_name ?? null}
             onSelect={(id) => assistantMutation.mutate(id)}
-            disabled={assistantMutation.isPending}
+            disabled={showAssistantPending || showSaveSourcePending}
             variant="ghost"
             size="sm"
             className="shrink-0"
@@ -90,6 +133,24 @@ export function EditorPillBar() {
         >
           <FileDown className="size-4" />
           Export
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => saveEditorAsSourceMutation.mutate()}
+          aria-label="Сохранить как источник"
+          disabled={
+            !currentFolder?.id ||
+            !exportContent ||
+            showSaveSourcePending
+          }
+        >
+          {showSaveSourcePending ? (
+            <InlineSpinner className="size-4" />
+          ) : (
+            <FileUp className="size-4" />
+          )}
+          В источники
         </Button>
         <Button
           variant="ghost"

@@ -22,7 +22,16 @@ interface NavigationState {
   collapseAllFolders: () => void
 }
 
-export const NAV_PANEL_DEFAULT_SIZE = 22
+export const NAV_PANEL_MIN_PCT = 10;
+export const NAV_PANEL_MAX_PCT = 20;
+export const NAV_PANEL_DEFAULT_SIZE = 16;
+
+function clampNavSize(size: number): number {
+  return Math.max(
+    NAV_PANEL_MIN_PCT,
+    Math.min(NAV_PANEL_MAX_PCT, Math.round(size))
+  );
+}
 const DEFAULT_ACCORDION_OPEN: AccordionSectionId[] = ["folders", "standalone"]
 
 export const useNavigationStore = create<NavigationState>()((set) => ({
@@ -42,7 +51,7 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
   },
 
   setNavigationPanelSize(size) {
-    set({ navigationPanelSize: Math.max(0, Math.min(100, size)) })
+    set({ navigationPanelSize: clampNavSize(size) })
   },
 
   toggleChatPanelCollapsed() {
@@ -72,7 +81,6 @@ export const useNavigationStore = create<NavigationState>()((set) => ({
   collapseAllFolders() {
     set({
       expandedFolderIds: [],
-      expandedAccordionSections: [],
-    })
+    });
   },
 }))

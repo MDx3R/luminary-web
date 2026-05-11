@@ -1,21 +1,39 @@
-/**
- * Context for requesting an inline suggestion (Notion/Cursor-style completion).
- * Extend this interface when integrating with a real API (e.g. cursor position, doc context).
- */
+import { useFolderStore } from "@/store/useFolderStore";
+import { streamFolderEditorAutocomplete } from "@/lib/api/folders-api";
+import { collectAutocompleteSuggestion } from "@/lib/stream-aggregate";
+
 export interface InlineSuggestionContext {
-  /** Text from the start of the current block (or document) up to the cursor. */
-  textBeforeCursor: string
+  textBeforeCursor: string;
+  textAfterCursor: string;
 }
 
 /**
- * Fetches an inline suggestion for the given context.
- * Stub: returns null or a fixed string for UI testing.
- * Replace with API call when backend is ready.
+ * Folder-scoped autocomplete via streaming API (same delta format as chat).
  */
 export async function getInlineSuggestion(
-  context: InlineSuggestionContext
+  context: InlineSuggestionContext,
+  signal?: AbortSignal
 ): Promise<string | null> {
-  // Stub: no real completion yet. Use context.textBeforeCursor when calling API.
-  if (context.textBeforeCursor.length === 0) return null
-  return null
+  const folderId = useFolderStore.getState().currentFolder?.id;
+  if (!folderId) return null;
+  if (
+    context.textBeforeCursor.length === 0 &&
+    context.textAfterCursor.length === 0
+  ) {
+    return null;
+  }
+  try {
+    return collectAutocompleteSuggestion(
+      streamFolderEditorAutocomplete(
+        folderId,
+        {
+          text_before_cursor: context.textBeforeCursor,
+          text_after_cursor: context.textAfterCursor,
+        },
+        signal
+      )
+    );
+  } catch {
+    return null;
+  }
 }

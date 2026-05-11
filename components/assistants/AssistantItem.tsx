@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Pencil, Trash2 } from "lucide-react";
+import { Bot, Pencil, Trash2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AssistantSummary } from "@/types/assistant";
 import { cn } from "@/lib/utils";
@@ -9,12 +9,17 @@ interface AssistantItemProps {
   assistant: AssistantSummary;
   onEdit: (assistant: AssistantSummary) => void;
   onDelete: (assistant: AssistantSummary) => void;
+  /** Publish personal assistant to the public catalog (POST /assistants/{id}/publish). */
+  onPublish?: () => void;
+  publishPending?: boolean;
 }
 
 export function AssistantItem({
   assistant,
   onEdit,
   onDelete,
+  onPublish,
+  publishPending,
 }: AssistantItemProps) {
   return (
     <div
@@ -39,6 +44,18 @@ export function AssistantItem({
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
+        {onPublish && assistant.type !== "public" ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onPublish}
+            disabled={publishPending}
+            aria-label={`Опубликовать «${assistant.name}»`}
+            title="Опубликовать в каталоге"
+          >
+            <Share2 className="size-4 text-muted-foreground" />
+          </Button>
+        ) : null}
         <Button
           variant="ghost"
           size="icon-sm"

@@ -21,6 +21,9 @@ import {
 import { queryKeys } from "@/lib/query-keys";
 import { ApiClientError } from "@/lib/api-client";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 interface EditAssistantModalProps {
   open: boolean;
@@ -36,6 +39,7 @@ export function EditAssistantModal({
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -45,20 +49,28 @@ export function EditAssistantModal({
     queryFn: () => getAssistant(assistantId!),
     enabled: open && Boolean(assistantId),
   });
+  const showAssistantLoading = useMinimumPending(isLoading);
 
   useEffect(() => {
-    if (assistant) {
+    if (!assistant) return;
+    queueMicrotask(() => {
       setName(assistant.name);
       setDescription(assistant.description);
+      setTagsInput((assistant.tags ?? []).join(", "));
       setPrompt(assistant.prompt ?? "");
-    }
+    });
   }, [assistant]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const tags = tagsInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
       await updateAssistantInfo(assistantId!, {
         name: name.trim(),
         description: description.trim(),
+        tags,
       });
       await updateAssistantInstructions(assistantId!, {
         prompt: prompt.trim(),
@@ -66,6 +78,7 @@ export function EditAssistantModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.assistants });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assistantsPublic });
       queryClient.invalidateQueries({
         queryKey: queryKeys.assistant(assistantId!),
       });
@@ -80,10 +93,13 @@ export function EditAssistantModal({
     },
   });
 
+  const showSavePending = useMinimumPending(saveMutation.isPending);
+
   const deleteMutation = useMutation({
     mutationFn: () => deleteAssistant(assistantId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.assistants });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assistantsPublic });
       onOpenChange(false);
       setDeleteDialogOpen(false);
     },
@@ -127,9 +143,9 @@ export function EditAssistantModal({
               Редактировать ассистента
             </DialogTitle>
           </DialogHeader>
-          {isLoading ? (
-            <div className="p-5 text-sm text-muted-foreground">
-              Загрузка…
+          {showAssistantLoading ? (
+            <div className="p-5">
+              <ListLoadingRow label="Загрузка…" className="text-sm" />
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-5">
@@ -152,6 +168,7 @@ export function EditAssistantModal({
                   placeholder="Название ассистента"
                   autoFocus
                   aria-invalid={!!error}
+                  disabled={showSavePending}
                 />
               </div>
               <div className="grid gap-2">
@@ -166,6 +183,22 @@ export function EditAssistantModal({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Краткое описание"
+                  disabled={showSavePending}
+                />
+              </div>
+              <div className="grid gap-2">
+                <label
+                  htmlFor="edit-assistant-tags"
+                  className="text-sm font-medium"
+                >
+                  Теги
+                </label>
+                <Input
+                  id="edit-assistant-tags"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="через запятую: право, текст, код"
+                  disabled={showSavePending}
                 />
               </div>
               <div className="grid gap-2">
@@ -182,6 +215,7 @@ export function EditAssistantModal({
                   placeholder="Системный промпт"
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   rows={3}
+                  disabled={showSavePending}
                 />
               </div>
               <DialogFooter className="flex flex-row justify-end gap-2 p-0 pt-2">
@@ -190,6 +224,7 @@ export function EditAssistantModal({
                   variant="ghost"
                   className="mr-auto text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={() => setDeleteDialogOpen(true)}
+                  disabled={showSavePending}
                 >
                   <Trash2 className="size-4 mr-1 inline" />
                   Удалить
@@ -198,11 +233,19 @@ export function EditAssistantModal({
                   type="button"
                   variant="ghost"
                   onClick={() => handleOpenChange(false)}
+                  disabled={showSavePending}
                 >
                   Отмена
                 </Button>
-                <Button type="submit" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Сохранение…" : "Сохранить"}
+                <Button type="submit" disabled={showSavePending}>
+                  {showSavePending ? (
+                    <span className="inline-flex items-center gap-2">
+                      <InlineSpinner className="size-3.5" />
+                      Сохранение…
+                    </span>
+                  ) : (
+                    "Сохранить"
+                  )}
                 </Button>
               </DialogFooter>
             </form>

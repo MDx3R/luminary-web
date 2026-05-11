@@ -64,29 +64,35 @@ export async function apiFetch<T>(
 
   let res = await fetch(url, {
     ...rest,
-    headers: { ...authHeaders, ...headers },
+    headers: { ...headers, ...authHeaders },
     credentials: "include",
   });
 
   if (res.status === 401 && !skipAuth) {
     try {
       await useAuthStore.getState().refreshTokens();
-      const newToken = useAuthStore.getState().accessToken;
-      if (newToken) {
-        res = await fetch(url, {
-          ...rest,
-          headers: {
-            ...authHeaders,
-            Authorization: `Bearer ${newToken}`,
-            ...headers,
-          },
-          credentials: "include",
-        });
-      }
     } catch {
-      useAuthStore.getState().logout();
+      await useAuthStore.getState().logout();
       throw new ApiClientError("Требуется авторизация.", 401);
     }
+    const newToken = useAuthStore.getState().accessToken;
+    if (!newToken) {
+      await useAuthStore.getState().logout();
+      throw new ApiClientError("Требуется авторизация.", 401);
+    }
+    res = await fetch(url, {
+      ...rest,
+      headers: {
+        ...headers,
+        Authorization: `Bearer ${newToken}`,
+      },
+      credentials: "include",
+    });
+  }
+
+  if (res.status === 401 && !skipAuth) {
+    await useAuthStore.getState().logout();
+    throw new ApiClientError("Требуется авторизация.", 401);
   }
 
   return handleResponse<T>(res);

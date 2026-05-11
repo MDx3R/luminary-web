@@ -53,6 +53,12 @@ export const useFolderStore = create<FolderState>()((set) => ({
   },
 
   clearFolder() {
-    set({ currentFolder: null, selectedChatId: null, folderHasChats: false });
+    set({
+      currentFolder: null,
+      selectedChatId: null,
+      folderHasChats: false,
+      pendingEditorText: null,
+      saveStatus: "saved",
+    });
   },
 }));

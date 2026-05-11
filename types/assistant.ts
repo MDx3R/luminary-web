@@ -3,6 +3,7 @@ export interface AssistantSummary {
   name: string;
   description: string;
   type: string;
+  tags: string[];
 }
 
 export interface Assistant {
@@ -12,4 +13,5 @@ export interface Assistant {
   type: string;
   prompt: string;
   created_at: string;
+  tags: string[];
 }

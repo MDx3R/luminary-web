@@ -7,17 +7,20 @@ export const mockAssistants: AssistantSummary[] = [
     name: "Исследователь",
     description: "",
     type: "custom",
+    tags: [],
   },
   {
     id: "asst-2",
     name: "Редактор",
     description: "",
     type: "custom",
+    tags: [],
   },
   {
     id: "asst-3",
     name: "Аналитик",
     description: "",
     type: "custom",
+    tags: [],
   },
 ];

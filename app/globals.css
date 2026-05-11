@@ -22,6 +22,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-link: var(--link);
+  --color-chrome: var(--chrome);
+  --color-pane-border: var(--pane-border);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -71,6 +74,9 @@
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
   --chart-5: oklch(0.424 0.199 265.638);
+  --link: oklch(0.488 0.243 264.376);
+  --chrome: var(--sidebar);
+  --pane-border: var(--sidebar-border);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -106,6 +112,9 @@
   --chart-3: oklch(0.546 0.245 262.881);
   --chart-4: oklch(0.488 0.243 264.376);
   --chart-5: oklch(0.424 0.199 265.638);
+  --link: oklch(0.72 0.15 251.813);
+  --chrome: var(--sidebar);
+  --pane-border: var(--sidebar-border);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -126,11 +135,19 @@
   html {
     @apply font-sans;
   }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    @apply cursor-pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    @apply cursor-not-allowed;
+  }
 }
 
 /* Tiptap / ProseMirror editor — Obsidian-like minimal style */
 .prose-editor.ProseMirror {
-  @apply min-h-[280px] py-6 leading-relaxed;
+  @apply min-h-[280px] max-w-[65ch] mx-auto py-8 leading-relaxed text-[15px] md:text-base;
 }
 /* Placeholder «Начните писать...» — только когда редактор полностью пустой */
 .prose-editor.ProseMirror p.is-editor-empty:first-child::before {
@@ -190,14 +207,14 @@
 }
 /* Links in editor: visible, underlined, distinct color (not white) */
 .prose-editor.ProseMirror a {
-  @apply text-chart-1 underline underline-offset-2;
+  @apply text-link underline underline-offset-2;
 }
 .prose-editor.ProseMirror a:hover {
   @apply opacity-90;
 }
 /* Links in prose (e.g. chat messages): same */
 .prose a {
-  @apply text-chart-1 underline underline-offset-2;
+  @apply text-link underline underline-offset-2;
 }
 .prose a:hover {
   @apply opacity-90;

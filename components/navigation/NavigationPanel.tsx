@@ -107,7 +107,7 @@ export function NavigationPanel() {
         open={createAssistantOpen}
         onOpenChange={setCreateAssistantOpen}
       />
-      <div className="flex h-11 shrink-0 items-center justify-center gap-1 border-b border-border px-2">
+      <div className="flex h-11 shrink-0 items-center justify-center gap-1 border-b border-pane-border px-2">
         {activeSection === "files" && (
           <>
             <Tooltip>

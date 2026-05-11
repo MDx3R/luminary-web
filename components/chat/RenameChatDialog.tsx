@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { updateChatName } from "@/lib/api/chats-api";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiClientError } from "@/lib/api-client";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 interface RenameChatDialogProps {
   open: boolean;
@@ -50,6 +52,8 @@ export function RenameChatDialog({
       );
     },
   });
+
+  const showPending = useMinimumPending(mutation.isPending);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,6 +96,7 @@ export function RenameChatDialog({
                 placeholder="Название чата"
                 aria-invalid={!!error}
                 className="w-full min-w-0 max-w-[240px]"
+                disabled={showPending}
               />
             </div>
           </div>
@@ -100,12 +105,19 @@ export function RenameChatDialog({
               type="button"
               variant="ghost"
               onClick={() => handleOpenChange(false)}
-              disabled={mutation.isPending}
+              disabled={showPending}
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Сохранение…" : "Сохранить"}
+            <Button type="submit" disabled={showPending}>
+              {showPending ? (
+                <span className="inline-flex items-center gap-2">
+                  <InlineSpinner className="size-3.5" />
+                  Сохранение…
+                </span>
+              ) : (
+                "Сохранить"
+              )}
             </Button>
           </DialogFooter>
         </form>

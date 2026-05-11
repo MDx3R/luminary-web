@@ -11,15 +11,16 @@ import { useQuery } from "@tanstack/react-query";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { useFolderStore } from "@/store/useFolderStore";
-import { useChatStore } from "@/store/useChatStore";
 import { useNavigationStore } from "@/store/useNavigationStore";
 import { getFolder } from "@/lib/api/folders-api";
 import { listMessages } from "@/lib/api/chats-api";
 import { queryKeys } from "@/lib/query-keys";
+import { useHydrateChatMessages } from "@/hooks/useHydrateChatMessages";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
 
 const CHAT_PANEL_MIN = "25%";
 const CHAT_PANEL_MAX = "35%";
-const CHAT_PANEL_DEFAULT = "25%";
 
 interface FolderViewProps {
   folderId: string;
@@ -32,8 +33,6 @@ export function FolderView({ folderId }: FolderViewProps) {
   const clearFolder = useFolderStore((s) => s.clearFolder);
   const selectedChatId = useFolderStore((s) => s.selectedChatId);
   const setSelectedChatId = useFolderStore((s) => s.setSelectedChatId);
-  const setChatMessages = useChatStore((s) => s.setChatMessages);
-  const setActiveChat = useChatStore((s) => s.setActiveChat);
   const chatPanelCollapsed = useNavigationStore((s) => s.chatPanelCollapsed);
 
   const chatFromUrl = searchParams.get("chat");
@@ -43,6 +42,7 @@ export function FolderView({ folderId }: FolderViewProps) {
     queryFn: () => getFolder(folderId),
     enabled: Boolean(folderId),
   });
+  const showFolderLoading = useMinimumPending(folderLoading);
 
   useEffect(() => {
     if (folder) setFolder(folder);
@@ -65,22 +65,7 @@ export function FolderView({ folderId }: FolderViewProps) {
     enabled: Boolean(effectiveChatId),
   });
 
-  useEffect(() => {
-    if (!effectiveChatId || !messages) return;
-    setActiveChat(effectiveChatId);
-    const current = useChatStore.getState().chats[effectiveChatId] ?? [];
-    const localPending = current.filter(
-      (m) =>
-        m.status === "pending" ||
-        m.status === "streaming" ||
-        m.id.startsWith("pending-")
-    );
-    const merged = [...messages];
-    for (const m of localPending) {
-      if (!merged.some((x) => x.id === m.id)) merged.push(m);
-    }
-    setChatMessages(effectiveChatId, merged);
-  }, [effectiveChatId, messages, setActiveChat, setChatMessages]);
+  useHydrateChatMessages(effectiveChatId, messages);
 
   // Sync URL with first chat when panel is open and URL has no chat param
   useEffect(() => {
@@ -104,12 +89,18 @@ export function FolderView({ folderId }: FolderViewProps) {
     router,
   ]);
 
-  if (folderLoading || !folder) {
+  if (showFolderLoading) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center p-4">
-        <p className="text-sm text-muted-foreground">
-          {folderLoading ? "Загрузка папки…" : "Папка не найдена"}
-        </p>
+        <ListLoadingRow label="Загрузка папки…" className="text-sm" />
+      </div>
+    );
+  }
+
+  if (!folder) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center p-4">
+        <p className="text-sm text-muted-foreground">Папка не найдена</p>
       </div>
     );
   }
@@ -131,12 +122,12 @@ export function FolderView({ folderId }: FolderViewProps) {
         orientation="horizontal"
         className="h-full min-h-0 w-full flex-1"
       >
-        <ResizablePanel defaultSize="65%" minSize="35%" className="min-h-0">
+        <ResizablePanel defaultSize="70%" minSize="35%" className="min-h-0">
           <EditorPanel />
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel
-          defaultSize={CHAT_PANEL_DEFAULT}
+          defaultSize="30%"
           minSize={CHAT_PANEL_MIN}
           maxSize={CHAT_PANEL_MAX}
           className="min-h-0 h-full flex flex-col"

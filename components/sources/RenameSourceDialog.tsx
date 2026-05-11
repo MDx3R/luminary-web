@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { updateSource } from "@/lib/api/sources-api";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiClientError } from "@/lib/api-client";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 interface RenameSourceDialogProps {
   open: boolean;
@@ -48,6 +50,8 @@ export function RenameSourceDialog({
       );
     },
   });
+
+  const showPending = useMinimumPending(mutation.isPending);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,18 +88,26 @@ export function RenameSourceDialog({
             placeholder="Название"
             aria-invalid={!!error}
             className="mb-4"
+            disabled={showPending}
           />
           <DialogFooter className="flex flex-row justify-end gap-2">
             <Button
               type="button"
               variant="ghost"
               onClick={() => handleOpenChange(false)}
-              disabled={mutation.isPending}
+              disabled={showPending}
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Сохранение…" : "Сохранить"}
+            <Button type="submit" disabled={showPending}>
+              {showPending ? (
+                <span className="inline-flex items-center gap-2">
+                  <InlineSpinner className="size-3.5" />
+                  Сохранение…
+                </span>
+              ) : (
+                "Сохранить"
+              )}
             </Button>
           </DialogFooter>
         </form>

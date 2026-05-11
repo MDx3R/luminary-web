@@ -2,32 +2,29 @@
 
 import { useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import type { Editor } from "@tiptap/core";
 import { createEditorExtensions } from "./editor-extensions";
 import {
   EditorBubbleMenu,
   type EditorBubbleMenuCallbacks,
 } from "./EditorBubbleMenu";
+import { getMarkdownFromEditor } from "@/lib/editor/markdown-from-editor";
 
 export interface TiptapEditorProps {
   initialContent?: string;
   onContentChange?: (markdown: string) => void;
-  bubbleMenuCallbacks: EditorBubbleMenuCallbacks;
+  getBubbleMenuCallbacks: (editor: Editor) => EditorBubbleMenuCallbacks;
+  /** When true, bubble shows a compact loader instead of actions (inline AI stream). */
+  bubbleInlineAiBusy?: boolean;
 }
 
 const CONTENT_CHANGE_DEBOUNCE_MS = 500;
 
-interface EditorWithMarkdown {
-  getMarkdown?: () => string;
-}
-
-function getMarkdownFromEditor(editor: EditorWithMarkdown): string {
-  return typeof editor.getMarkdown === "function" ? editor.getMarkdown() : "";
-}
-
 export function TiptapEditor({
   initialContent,
   onContentChange,
-  bubbleMenuCallbacks,
+  getBubbleMenuCallbacks,
+  bubbleInlineAiBusy = false,
 }: TiptapEditorProps) {
   const onContentChangeRef = useRef(onContentChange);
   useEffect(() => {
@@ -56,7 +53,7 @@ export function TiptapEditor({
     if (!editor || !onContentChangeRef.current) return;
     const handler = () => {
       if (!editor.isDestroyed) {
-        const markdown = getMarkdownFromEditor(editor as EditorWithMarkdown);
+        const markdown = getMarkdownFromEditor(editor);
         onContentChangeRef.current?.(markdown);
       }
     };
@@ -80,7 +77,11 @@ export function TiptapEditor({
   return (
     <>
       <EditorContent editor={editor} />
-      <EditorBubbleMenu editor={editor} callbacks={bubbleMenuCallbacks} />
+      <EditorBubbleMenu
+        editor={editor}
+        callbacks={getBubbleMenuCallbacks(editor)}
+        inlineAiBusy={bubbleInlineAiBusy}
+      />
     </>
   );
 }

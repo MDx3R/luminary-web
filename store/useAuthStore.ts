@@ -4,6 +4,16 @@ import * as authApi from "@/lib/auth-api";
 
 const STORAGE_KEY = "luminary-auth";
 
+/** Thrown when access token expired but refresh token is missing — callers should logout. */
+export class NoRefreshTokenError extends Error {
+  constructor() {
+    super("NO_REFRESH_TOKEN");
+    this.name = "NoRefreshTokenError";
+  }
+}
+
+let refreshInFlight: Promise<void> | null = null;
+
 export interface AuthUser {
   id: string;
   username: string;
@@ -79,15 +89,29 @@ export const useAuthStore = create<AuthState>()(
 
       async refreshTokens() {
         const { refreshToken } = get();
-        if (!refreshToken) return;
-        const tokens = await authApi.refreshToken(refreshToken);
-        set({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-          isLoggedIn: true,
-        });
-        const me = await authApi.fetchMe(tokens.access_token);
-        set({ user: { id: me.id, username: me.username } });
+        if (!refreshToken) {
+          throw new NoRefreshTokenError();
+        }
+        if (!refreshInFlight) {
+          refreshInFlight = (async () => {
+            const rt = get().refreshToken;
+            if (!rt) throw new NoRefreshTokenError();
+            const tokens = await authApi.refreshToken(rt);
+            // Drop stale refresh after logout/login or a newer refresh replaced tokens.
+            if (get().refreshToken !== rt) return;
+            set({
+              accessToken: tokens.access_token,
+              refreshToken: tokens.refresh_token,
+              isLoggedIn: true,
+            });
+            const me = await authApi.fetchMe(tokens.access_token);
+            if (get().accessToken !== tokens.access_token) return;
+            set({ user: { id: me.id, username: me.username } });
+          })().finally(() => {
+            refreshInFlight = null;
+          });
+        }
+        await refreshInFlight;
       },
 
       async loadSession() {
@@ -103,12 +127,7 @@ export const useAuthStore = create<AuthState>()(
           try {
             await get().refreshTokens();
           } catch {
-            set({
-              user: null,
-              accessToken: null,
-              refreshToken: null,
-              isLoggedIn: false,
-            });
+            await get().logout();
           }
         } finally {
           set({ isHydrated: true });

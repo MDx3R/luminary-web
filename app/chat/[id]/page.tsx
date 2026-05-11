@@ -1,22 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ChatToolbar } from "@/components/chat/ChatToolbar";
-import { useChatStore } from "@/store/useChatStore";
 import { listMessages } from "@/lib/api/chats-api";
 import { queryKeys } from "@/lib/query-keys";
+import { useHydrateChatMessages } from "@/hooks/useHydrateChatMessages";
 
 export default function StandaloneChatPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const id = typeof params.id === "string" ? params.id : null;
-  const setActiveChat = useChatStore((s) => s.setActiveChat);
-  const setChatMessages = useChatStore((s) => s.setChatMessages);
-  const addMessage = useChatStore((s) => s.addMessage);
-  const initialQueryAdded = useRef(false);
 
   const { data: messages } = useQuery({
     queryKey: queryKeys.messages(id ?? ""),
@@ -24,23 +18,7 @@ export default function StandaloneChatPage() {
     enabled: Boolean(id),
   });
 
-  useEffect(() => {
-    if (!id) return;
-    setActiveChat(id);
-  }, [id, setActiveChat]);
-
-  useEffect(() => {
-    if (id && messages) setChatMessages(id, messages);
-  }, [id, messages, setChatMessages]);
-
-  useEffect(() => {
-    if (!id || initialQueryAdded.current) return;
-    const q = searchParams.get("q");
-    if (q?.trim()) {
-      initialQueryAdded.current = true;
-      addMessage(id, { role: "user", content: q.trim() });
-    }
-  }, [id, addMessage, searchParams]);
+  useHydrateChatMessages(id, messages);
 
   if (!id) return null;
 

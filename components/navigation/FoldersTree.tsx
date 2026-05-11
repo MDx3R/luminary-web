@@ -33,6 +33,8 @@ import { RenameFolderDialog } from "@/components/folder/RenameFolderDialog";
 import { RenameChatDialog } from "@/components/chat/RenameChatDialog";
 import { ApiClientError } from "@/lib/api-client";
 import type { FolderSummary } from "@/types/folder";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
 
 function FolderRow({
   folder,
@@ -236,6 +238,7 @@ export function FoldersTree() {
     queryKey: queryKeys.folders,
     queryFn: listFolders,
   });
+  const showFoldersLoading = useMinimumPending(isLoading);
 
   const deleteFolderMutation = useMutation({
     mutationFn: (id: string) => deleteFolder(id),
@@ -324,12 +327,8 @@ export function FoldersTree() {
     });
   }
 
-  if (isLoading) {
-    return (
-      <div className="py-2 px-2 text-xs text-muted-foreground">
-        Загрузка папок…
-      </div>
-    );
+  if (showFoldersLoading) {
+    return <ListLoadingRow label="Загрузка папок…" className="py-2" />;
   }
 
   return (

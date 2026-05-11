@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -12,15 +13,15 @@ import { SourcesPanel } from "@/components/sources/SourcesPanel";
 import { AddSourceModal } from "@/components/sources/AddSourceModal";
 import { AttachSourceModal } from "@/components/sources/AttachSourceModal";
 import { SourceStatusPolling } from "@/components/sources/SourceStatusPolling";
-import { useNavigationStore } from "@/store/useNavigationStore";
+import { AssistantsGlobalEditModal } from "@/components/assistants/AssistantsGlobalEditModal";
+import { useNavigationStore, NAV_PANEL_MIN_PCT, NAV_PANEL_MAX_PCT } from "@/store/useNavigationStore";
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
-const NAV_PANEL_MIN = "10";
-const NAV_PANEL_DEFAULT = "15";
-const NAV_PANEL_MAX = "20";
+const NAV_PANEL_MIN = String(NAV_PANEL_MIN_PCT);
+const NAV_PANEL_MAX = String(NAV_PANEL_MAX_PCT);
 
 export function AppShell({ children }: AppShellProps) {
   const navigationPanelCollapsed = useNavigationStore(
@@ -42,21 +43,27 @@ export function AppShell({ children }: AppShellProps) {
     if (typeof navSize === "number") setNavigationPanelSize(navSize);
   };
 
-  const navSizeClamped = Math.max(
-    Number(NAV_PANEL_MIN),
-    Math.min(Number(NAV_PANEL_DEFAULT), navigationPanelSize)
+  const navSize = Math.max(
+    NAV_PANEL_MIN_PCT,
+    Math.min(NAV_PANEL_MAX_PCT, navigationPanelSize)
   );
   const defaultLayout = {
-    "luminary-nav": navSizeClamped,
-    "luminary-main": 100 - navSizeClamped,
+    "luminary-nav": navSize,
+    "luminary-main": 100 - navSize,
   };
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden">
-      <Header
-        onToggleNavPanel={toggleNavigationCollapsed}
-        onToggleChatPanel={toggleChatPanelCollapsed}
-      />
+      <Suspense
+        fallback={
+          <div className="sticky top-0 z-40 h-11 w-full shrink-0 border-b border-sidebar-border bg-sidebar" />
+        }
+      >
+        <Header
+          onToggleNavPanel={toggleNavigationCollapsed}
+          onToggleChatPanel={toggleChatPanelCollapsed}
+        />
+      </Suspense>
       <div className="flex min-h-0 flex-1">
         <ActivityBar onToggleNavPanel={toggleNavigationCollapsed} />
         {navigationPanelCollapsed ? (
@@ -73,7 +80,7 @@ export function AppShell({ children }: AppShellProps) {
           >
             <ResizablePanel
               id="luminary-nav"
-              defaultSize={`${navigationPanelSize}%`}
+              defaultSize={`${navSize}%`}
               minSize={`${NAV_PANEL_MIN}%`}
               maxSize={`${NAV_PANEL_MAX}%`}
               className="min-w-0"
@@ -83,7 +90,7 @@ export function AppShell({ children }: AppShellProps) {
             <ResizableHandle withHandle className="border-sidebar-border" />
             <ResizablePanel
               id="luminary-main"
-              defaultSize={`${100 - navigationPanelSize}%`}
+              defaultSize={`${100 - navSize}%`}
               minSize="30%"
               className="min-h-0 min-w-0 h-full flex flex-col"
             >
@@ -100,6 +107,7 @@ export function AppShell({ children }: AppShellProps) {
       <SourcesPanel />
       <AddSourceModal />
       <AttachSourceModal />
+      <AssistantsGlobalEditModal />
     </div>
   );
 }

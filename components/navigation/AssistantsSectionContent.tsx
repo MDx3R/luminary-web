@@ -3,35 +3,78 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { listAssistants, deleteAssistant } from "@/lib/api/assistants-api";
+import { Button } from "@/components/ui/button";
+import {
+  listAssistants,
+  listPublicAssistants,
+  deleteAssistant,
+  cloneAssistant,
+  publishAssistant,
+} from "@/lib/api/assistants-api";
 import { queryKeys } from "@/lib/query-keys";
 import { AssistantItem } from "@/components/assistants/AssistantItem";
-import { EditAssistantModal } from "@/components/assistants/EditAssistantModal";
+import { useAssistantsUiStore } from "@/store/useAssistantsUiStore";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import type { AssistantSummary } from "@/types/assistant";
 import { ApiClientError } from "@/lib/api-client";
 import { toast } from "sonner";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
+import { Copy, Library } from "lucide-react";
 
 export function AssistantsSectionContent() {
   const queryClient = useQueryClient();
-  const [editingAssistantId, setEditingAssistantId] = useState<string | null>(
-    null
-  );
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  const openAssistantEditor = useAssistantsUiStore((s) => s.openAssistantEditor);
+  const [tab, setTab] = useState<"mine" | "catalog">("mine");
   const [deletingAssistant, setDeletingAssistant] = useState<{
     id: string;
     name: string;
   } | null>(null);
 
-  const { data: assistants = [], isLoading } = useQuery({
+  const { data: assistants = [], isLoading: mineLoading } = useQuery({
     queryKey: queryKeys.assistants,
     queryFn: listAssistants,
+    enabled: tab === "mine",
+  });
+
+  const { data: publicAssistants = [], isLoading: publicLoading } = useQuery({
+    queryKey: queryKeys.assistantsPublic,
+    queryFn: () => listPublicAssistants({ limit: 100, offset: 0 }),
+    enabled: tab === "catalog",
+  });
+
+  const cloneMutation = useMutation({
+    mutationFn: (id: string) => cloneAssistant(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.assistants });
+      toast.success("Ассистент добавлен в ваш список");
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof ApiClientError ? err.message : "Не удалось клонировать"
+      );
+    },
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: (id: string) => publishAssistant(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.assistants });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assistantsPublic });
+      toast.success("Ассистент опубликован в каталоге");
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof ApiClientError ? err.message : "Не удалось опубликовать"
+      );
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteAssistant(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.assistants });
+      queryClient.invalidateQueries({ queryKey: queryKeys.assistantsPublic });
       setDeletingAssistant(null);
       toast.success("Ассистент удалён");
     },
@@ -43,55 +86,97 @@ export function AssistantsSectionContent() {
   });
 
   function handleEdit(assistant: AssistantSummary) {
-    setEditingAssistantId(assistant.id);
-    setEditModalOpen(true);
+    openAssistantEditor(assistant.id);
   }
 
   function handleDelete(assistant: AssistantSummary) {
     setDeletingAssistant({ id: assistant.id, name: assistant.name });
   }
 
-  function handleEditModalOpenChange(open: boolean) {
-    if (!open) setEditingAssistantId(null);
-    setEditModalOpen(open);
-  }
-
-  if (isLoading) {
-    return (
-      <div className="px-2 py-2 text-xs text-muted-foreground">
-        Загрузка ассистентов…
-      </div>
-    );
-  }
+  const isLoading = tab === "mine" ? mineLoading : publicLoading;
+  const showAssistantsLoading = useMinimumPending(isLoading);
+  const list = tab === "mine" ? assistants : publicAssistants;
 
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-hidden">
-      {assistants.length === 0 ? (
+      <div className="flex shrink-0 gap-1 px-2 pt-1">
+        <Button
+          type="button"
+          variant={tab === "mine" ? "secondary" : "ghost"}
+          size="sm"
+          className="h-7 flex-1 text-xs"
+          onClick={() => setTab("mine")}
+        >
+          Мои
+        </Button>
+        <Button
+          type="button"
+          variant={tab === "catalog" ? "secondary" : "ghost"}
+          size="sm"
+          className="h-7 flex-1 gap-1 text-xs"
+          onClick={() => setTab("catalog")}
+        >
+          <Library className="size-3.5 shrink-0" />
+          Каталог
+        </Button>
+      </div>
+      {showAssistantsLoading ? (
+        <ListLoadingRow label="Загрузка…" />
+      ) : list.length === 0 ? (
         <p className="px-2 py-2 text-xs text-muted-foreground">
-          Нет ассистентов. Создайте ассистента кнопкой выше.
+          {tab === "mine"
+            ? "Нет ассистентов. Создайте ассистента кнопкой выше."
+            : "В каталоге пока нет публичных ассистентов."}
         </p>
       ) : (
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="min-h-full w-full px-3">
             <ul className="flex w-full flex-col gap-2 py-2 pb-4">
-              {assistants.map((assistant) => (
+              {list.map((assistant) => (
                 <li key={assistant.id} className="w-full">
-                  <AssistantItem
-                    assistant={assistant}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
+                  {tab === "mine" ? (
+                    <AssistantItem
+                      assistant={assistant}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onPublish={() => publishMutation.mutate(assistant.id)}
+                      publishPending={
+                        publishMutation.isPending &&
+                        publishMutation.variables === assistant.id
+                      }
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{assistant.name}</p>
+                        {assistant.description ? (
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {assistant.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="shrink-0 gap-1"
+                        disabled={
+                          cloneMutation.isPending &&
+                          cloneMutation.variables === assistant.id
+                        }
+                        onClick={() => cloneMutation.mutate(assistant.id)}
+                      >
+                        <Copy className="size-3.5" />
+                        Клонировать
+                      </Button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
           </div>
         </ScrollArea>
       )}
-      <EditAssistantModal
-        open={editModalOpen}
-        onOpenChange={handleEditModalOpenChange}
-        assistantId={editingAssistantId}
-      />
       <ConfirmDeleteDialog
         open={Boolean(deletingAssistant)}
         onOpenChange={(open) => !open && setDeletingAssistant(null)}

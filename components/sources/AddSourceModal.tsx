@@ -19,6 +19,8 @@ import { addSourceToFolder } from "@/lib/api/folders-api";
 import { addSourceToChat } from "@/lib/api/chats-api";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 type Step = "choose" | "file" | "url";
 
@@ -113,6 +115,7 @@ export function AddSourceModal() {
   const canAddFile = Boolean(selectedFile);
   const canAddUrl = Boolean(urlValue.trim());
   const isPending = fileMutation.isPending || linkMutation.isPending;
+  const showPending = useMinimumPending(isPending);
 
   if (attachContext) return null;
 
@@ -149,16 +152,32 @@ export function AddSourceModal() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.txt"
               onChange={handleFileChange}
-              className="text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground file:text-sm"
-              aria-label="Выберите файл"
+              className="sr-only"
+              tabIndex={-1}
+              aria-label="Выберите файл с устройства"
+              disabled={showPending}
             />
-            {selectedFile && (
-              <p className="text-sm text-muted-foreground">
-                Выбран: {selectedFile.name}
-              </p>
-            )}
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-fit"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={showPending}
+              >
+                Выбрать файл
+              </Button>
+              {selectedFile ? (
+                <p className="text-sm text-muted-foreground truncate">
+                  {selectedFile.name}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Файл не выбран
+                </p>
+              )}
+            </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 variant="ghost"
@@ -166,14 +185,22 @@ export function AddSourceModal() {
                   setStep("choose");
                   setSelectedFile(null);
                 }}
+                disabled={showPending}
               >
                 Назад
               </Button>
               <Button
                 onClick={handleAddFile}
-                disabled={!canAddFile || isPending}
+                disabled={!canAddFile || showPending}
               >
-                {isPending ? "Загрузка…" : "Добавить"}
+                {showPending ? (
+                  <span className="inline-flex items-center gap-2">
+                    <InlineSpinner className="size-3.5" />
+                    Загрузка…
+                  </span>
+                ) : (
+                  "Добавить"
+                )}
               </Button>
             </DialogFooter>
           </div>
@@ -188,6 +215,7 @@ export function AddSourceModal() {
               onChange={(e) => setUrlValue(e.target.value)}
               aria-label="URL источника"
               className={cn("w-full")}
+              disabled={showPending}
             />
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
@@ -196,14 +224,22 @@ export function AddSourceModal() {
                   setStep("choose");
                   setUrlValue("");
                 }}
+                disabled={showPending}
               >
                 Назад
               </Button>
               <Button
                 onClick={handleAddUrl}
-                disabled={!canAddUrl || isPending}
+                disabled={!canAddUrl || showPending}
               >
-                {isPending ? "Добавление…" : "Добавить"}
+                {showPending ? (
+                  <span className="inline-flex items-center gap-2">
+                    <InlineSpinner className="size-3.5" />
+                    Добавление…
+                  </span>
+                ) : (
+                  "Добавить"
+                )}
               </Button>
             </DialogFooter>
           </div>

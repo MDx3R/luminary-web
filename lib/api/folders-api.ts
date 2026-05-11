@@ -1,6 +1,8 @@
 import { apiFetch } from "@/lib/api-client";
+import { postJsonSseStream } from "@/lib/sse-stream";
 import type { Folder, FolderSummary } from "@/types/folder";
 import type { IDResponse } from "@/lib/api-types";
+import type { StreamingMessageEvent } from "@/types/chat";
 
 export async function listFolders(): Promise<FolderSummary[]> {
   return apiFetch<FolderSummary[]>("/folders");
@@ -96,8 +98,6 @@ export async function createFolderChat(
   payload: {
     name?: string | null;
     assistant_id?: string | null;
-    model_id: string;
-    max_context_messages: number;
   }
 ): Promise<IDResponse> {
   return apiFetch<IDResponse>(`/folders/${folderId}/chats`, {
@@ -105,4 +105,30 @@ export async function createFolderChat(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+}
+
+/** SSE stream: same event shape as chat assistant response. */
+export async function* streamFolderEditorInline(
+  folderId: string,
+  payload: { instruction: string; document_markdown: string },
+  signal?: AbortSignal
+): AsyncGenerator<StreamingMessageEvent> {
+  yield* postJsonSseStream(
+    `/folders/${folderId}/editor/inline/stream`,
+    payload,
+    signal
+  );
+}
+
+/** SSE stream: same event shape as chat assistant response. */
+export async function* streamFolderEditorAutocomplete(
+  folderId: string,
+  payload: { text_before_cursor: string; text_after_cursor: string },
+  signal?: AbortSignal
+): AsyncGenerator<StreamingMessageEvent> {
+  yield* postJsonSseStream(
+    `/folders/${folderId}/editor/autocomplete/stream`,
+    payload,
+    signal
+  );
 }

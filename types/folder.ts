@@ -5,7 +5,6 @@ export type SaveStatus = "saved" | "saving" | "unsaved";
 export interface FolderChatItem {
   id: string;
   name: string;
-  model_id: string;
   created_at: string;
 }
 

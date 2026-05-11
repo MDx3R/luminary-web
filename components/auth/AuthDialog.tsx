@@ -15,6 +15,8 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/useAuthStore";
 import { AuthApiError } from "@/lib/api-types";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 type AuthMode = "login" | "register";
 
@@ -38,11 +40,13 @@ export function AuthDialog({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const showAuthBusy = useMinimumPending(isLoading);
 
   const isLogin = mode === "login";
 
   useEffect(() => {
-    if (open) setMode(defaultMode);
+    if (!open) return;
+    queueMicrotask(() => setMode(defaultMode));
   }, [open, defaultMode]);
 
   function resetForm() {
@@ -122,7 +126,7 @@ export function AuthDialog({
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="username"
-                  disabled={isLoading}
+                  disabled={showAuthBusy}
                 />
               </div>
               <div className="space-y-2">
@@ -135,7 +139,7 @@ export function AuthDialog({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  disabled={isLoading}
+                  disabled={showAuthBusy}
                 />
               </div>
               {!isLogin && (
@@ -149,20 +153,23 @@ export function AuthDialog({
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    disabled={isLoading}
+                    disabled={showAuthBusy}
                   />
                 </div>
               )}
             </CardContent>
             <CardFooter className="flex flex-col gap-3 pt-4 border-t border-border mt-2">
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading
-                  ? isLogin
-                    ? "Вход…"
-                    : "Регистрация…"
-                  : isLogin
-                    ? "Войти"
-                    : "Зарегистрироваться"}
+              <Button type="submit" className="w-full" disabled={showAuthBusy}>
+                {showAuthBusy ? (
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <InlineSpinner className="size-4" />
+                    {isLogin ? "Вход…" : "Регистрация…"}
+                  </span>
+                ) : isLogin ? (
+                  "Войти"
+                ) : (
+                  "Зарегистрироваться"
+                )}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 {isLogin ? (
@@ -171,6 +178,7 @@ export function AuthDialog({
                     <button
                       type="button"
                       className="text-primary underline-offset-4 hover:underline"
+                      disabled={showAuthBusy}
                       onClick={() => {
                         setMode("register");
                         setError(null);
@@ -185,6 +193,7 @@ export function AuthDialog({
                     <button
                       type="button"
                       className="text-primary underline-offset-4 hover:underline"
+                      disabled={showAuthBusy}
                       onClick={() => {
                         setMode("login");
                         setError(null);

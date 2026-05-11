@@ -5,19 +5,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { listSources } from "@/lib/api/sources-api";
 import { queryKeys } from "@/lib/query-keys";
 import { SourceItem } from "@/components/sources/SourceItem";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
 
 export function SourcesSectionContent() {
   const { data: sources = [], isLoading } = useQuery({
     queryKey: queryKeys.sources,
     queryFn: listSources,
   });
+  const showSourcesLoading = useMinimumPending(isLoading);
 
-  if (isLoading) {
-    return (
-      <div className="px-2 py-2 text-xs text-muted-foreground">
-        Загрузка источников…
-      </div>
-    );
+  if (showSourcesLoading) {
+    return <ListLoadingRow label="Загрузка источников…" />;
   }
 
   return (

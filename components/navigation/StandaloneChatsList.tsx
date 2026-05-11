@@ -19,6 +19,8 @@ import { useSourcesStore } from "@/store/useSourcesStore";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { RenameChatDialog } from "@/components/chat/RenameChatDialog";
 import { ApiClientError } from "@/lib/api-client";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
 
 export function StandaloneChatsList() {
   const router = useRouter();
@@ -32,6 +34,7 @@ export function StandaloneChatsList() {
     queryKey: queryKeys.chats,
     queryFn: listChats,
   });
+  const showChatsLoading = useMinimumPending(isLoading);
 
   const deleteChatMutation = useMutation({
     mutationFn: (id: string) => deleteChat(id),
@@ -47,12 +50,8 @@ export function StandaloneChatsList() {
     },
   });
 
-  if (isLoading) {
-    return (
-      <div className="px-2 py-2 text-xs text-muted-foreground">
-        Загрузка чатов…
-      </div>
-    );
+  if (showChatsLoading) {
+    return <ListLoadingRow label="Загрузка чатов…" />;
   }
 
   if (chats.length === 0) {

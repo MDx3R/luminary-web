@@ -9,6 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 export interface ConfirmDeleteDialogProps {
   open: boolean;
@@ -29,6 +31,8 @@ export function ConfirmDeleteDialog({
   onConfirm,
   isPending = false,
 }: ConfirmDeleteDialogProps) {
+  const showPending = useMinimumPending(isPending);
+
   async function handleConfirm() {
     await onConfirm();
     onOpenChange(false);
@@ -46,7 +50,7 @@ export function ConfirmDeleteDialog({
             type="button"
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            disabled={isPending}
+            disabled={showPending}
           >
             Отмена
           </Button>
@@ -54,9 +58,16 @@ export function ConfirmDeleteDialog({
             type="button"
             variant="destructive"
             onClick={handleConfirm}
-            disabled={isPending}
+            disabled={showPending}
           >
-            {isPending ? "Удаление…" : confirmLabel}
+            {showPending ? (
+              <span className="inline-flex items-center gap-2">
+                <InlineSpinner className="size-3.5" />
+                Удаление…
+              </span>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

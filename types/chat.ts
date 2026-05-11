@@ -32,7 +32,6 @@ export interface ChatMessage {
   role: string;
   status: string;
   content: string;
-  model_id: string;
   tokens?: number | null;
   created_at: string;
   edited_at: string;
@@ -43,7 +42,6 @@ export interface ChatMessage {
 export interface ChatSummary {
   id: string;
   name: string;
-  model_id: string;
   created_at: string;
 }
 
@@ -53,8 +51,6 @@ export interface Chat {
   folder_id: string | null;
   assistant_id: string | null;
   assistant_name: string | null;
-  model_id: string;
-  max_context_messages: number;
   sources: ChatSourceItem[];
   created_at: string;
 }

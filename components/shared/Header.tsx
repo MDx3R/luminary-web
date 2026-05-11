@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,7 @@ interface HeaderProps {
 export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [authOpen, setAuthOpen] = useState(false);
   const [authDefaultMode, setAuthDefaultMode] = useState<AuthMode>("login");
   const isHydrated = useAuthStore((s) => s.isHydrated);
@@ -59,24 +60,25 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   }, [loadSession]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const auth = new URLSearchParams(window.location.search).get("auth");
+    const auth = searchParams.get("auth");
     if (auth === "login" || auth === "register") {
       const mode = auth as AuthMode;
       queueMicrotask(() => {
         setAuthDefaultMode(mode);
         setAuthOpen(true);
       });
-      router.replace("/", { scroll: false });
+      const path =
+        pathname && pathname !== "/" ? pathname : "/dashboard";
+      router.replace(path, { scroll: false });
     }
-  }, [router]);
+  }, [router, pathname, searchParams]);
 
   async function handleLogout() {
     await logout();
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-11 w-full shrink-0 items-center justify-between gap-2 border-b border-border bg-sidebar px-3">
+    <header className="sticky top-0 z-40 flex h-11 w-full shrink-0 items-center justify-between gap-2 border-b border-sidebar-border bg-sidebar px-3">
       <AuthDialog
         open={authOpen}
         onOpenChange={setAuthOpen}

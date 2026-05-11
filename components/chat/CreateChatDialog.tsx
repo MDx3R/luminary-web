@@ -17,11 +17,8 @@ import { createChat } from "@/lib/api/chats-api";
 import { createFolderChat } from "@/lib/api/folders-api";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiClientError } from "@/lib/api-client";
-
-const DEFAULT_MODEL_ID =
-  process.env.NEXT_PUBLIC_DEFAULT_MODEL_ID ??
-  "00000000-0000-0000-0000-000000000001";
-const DEFAULT_MAX_CONTEXT = 10;
+import { useMinimumPending } from "@/hooks/useMinimumPending";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
 interface CreateChatDialogProps {
   open: boolean;
@@ -46,8 +43,6 @@ export function CreateChatDialog({
     mutationFn: async () => {
       const payload = {
         name: name.trim() || null,
-        model_id: DEFAULT_MODEL_ID,
-        max_context_messages: DEFAULT_MAX_CONTEXT,
       };
       if (folderId) {
         return createFolderChat(folderId, payload);
@@ -77,6 +72,8 @@ export function CreateChatDialog({
       );
     },
   });
+
+  const showPending = useMinimumPending(mutation.isPending);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -120,6 +117,7 @@ export function CreateChatDialog({
               placeholder="Название чата"
               autoFocus
               aria-invalid={!!error}
+              disabled={showPending}
             />
           </div>
           <DialogFooter className="p-0 pt-2 flex flex-row justify-end gap-2">
@@ -127,11 +125,19 @@ export function CreateChatDialog({
               type="button"
               variant="ghost"
               onClick={() => handleOpenChange(false)}
+              disabled={showPending}
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Создание…" : "Создать"}
+            <Button type="submit" disabled={showPending}>
+              {showPending ? (
+                <span className="inline-flex items-center gap-2">
+                  <InlineSpinner className="size-3.5" />
+                  Создание…
+                </span>
+              ) : (
+                "Создать"
+              )}
             </Button>
           </DialogFooter>
         </form>
