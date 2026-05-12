@@ -1,5 +1,5 @@
-import { Omnibar } from "@/components/dashboard/Omnibar"
-import { DashboardGrid } from "@/components/dashboard/DashboardGrid"
+import { Omnibar } from "@/components/dashboard/Omnibar";
+import { DashboardGrid } from "@/components/dashboard/DashboardGrid";
 
 export default function DashboardPage() {
   return (
@@ -13,5 +13,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

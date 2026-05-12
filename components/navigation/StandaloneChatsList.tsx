@@ -40,7 +40,7 @@ export function StandaloneChatsList() {
     mutationFn: (id: string) => deleteChat(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.chats });
-      if (pathname === `/chat/${id}`) router.push("/");
+      if (pathname === `/chat/${id}`) router.push("/dashboard");
       toast.success("Чат удалён");
     },
     onError: (err) => {

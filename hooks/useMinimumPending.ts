@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, startTransition } from "react";
 
 /** Минимальное время, в течение которого индикатор загрузки остаётся видимым после завершения операции. */
 export const LOADER_MIN_VISIBLE_MS = 400;
@@ -22,7 +22,9 @@ export function useMinimumPending(
         hideTimerRef.current = null;
       }
       startRef.current = Date.now();
-      setDisplayed(true);
+      startTransition(() => {
+        setDisplayed(true);
+      });
       return;
     }
 
@@ -57,5 +59,5 @@ export function useMinimumPending(
     };
   }, []);
 
-  return displayed;
+  return active || displayed;
 }

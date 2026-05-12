@@ -42,11 +42,10 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   const searchParams = useSearchParams();
   const [authOpen, setAuthOpen] = useState(false);
   const [authDefaultMode, setAuthDefaultMode] = useState<AuthMode>("login");
-  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const sessionResolved = useAuthStore((s) => s.sessionResolved);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const loadSession = useAuthStore((s) => s.loadSession);
   const navigationPanelCollapsed = useNavigationStore(
     (s) => s.navigationPanelCollapsed
   );
@@ -54,10 +53,6 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   const folderHasChats = useFolderStore((s) => s.folderHasChats);
 
   const isFolderView = pathname?.startsWith("/folder/") ?? false;
-
-  useEffect(() => {
-    loadSession();
-  }, [loadSession]);
 
   useEffect(() => {
     const auth = searchParams.get("auth");
@@ -141,7 +136,7 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {!isHydrated ? (
+        {!sessionResolved ? (
           <div
             className="h-8 w-20 rounded-lg bg-muted/50 animate-pulse"
             aria-hidden

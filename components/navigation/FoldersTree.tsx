@@ -246,7 +246,7 @@ export function FoldersTree() {
       queryClient.invalidateQueries({ queryKey: queryKeys.folders });
       if (currentFolderId === id) {
         clearFolder();
-        router.push("/");
+        router.push("/dashboard");
       }
     },
     onError: (err) => {

@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/providers/QueryProvider";
-import { AppShell } from "@/components/shared/AppShell";
+import { SessionGate } from "@/components/auth/SessionGate";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,7 +34,7 @@ export default function RootLayout({
       <body className="antialiased bg-background text-foreground font-sans">
         <QueryProvider>
           <TooltipProvider>
-            <AppShell>{children}</AppShell>
+            <SessionGate>{children}</SessionGate>
           </TooltipProvider>
           <Toaster />
         </QueryProvider>

@@ -13,14 +13,17 @@ import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { InlineSpinner } from "@/components/shared/InlineSpinner";
 import { useNavigationStore } from "@/store/useNavigationStore";
 import { useAssistantsUiStore } from "@/store/useAssistantsUiStore";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const EMPTY_MESSAGE =
   "Твоя база знаний пуста. Создай папку и загрузи первый документ.";
 
 function RecentWorkSection() {
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const { data: folders = [], isLoading } = useQuery({
     queryKey: queryKeys.folders,
     queryFn: listFolders,
+    enabled: isLoggedIn,
   });
   const showFoldersLoading = useMinimumPending(isLoading);
   const recentFolders = folders.slice(0, 4);
@@ -76,9 +79,11 @@ function RecentWorkSection() {
 }
 
 function JumpBackSection() {
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const { data: chats = [], isLoading } = useQuery({
     queryKey: queryKeys.chats,
     queryFn: listChats,
+    enabled: isLoggedIn,
   });
   const showChatsLoading = useMinimumPending(isLoading);
   const recentChats = chats.slice(0, 5);
@@ -147,9 +152,11 @@ function TopAssistantsSection() {
     (s) => s.toggleNavigationCollapsed
   );
 
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const { data: assistants = [], isLoading } = useQuery({
     queryKey: queryKeys.assistants,
     queryFn: listAssistants,
+    enabled: isLoggedIn,
   });
   const showAssistantsLoading = useMinimumPending(isLoading);
 
@@ -216,6 +223,9 @@ function TopAssistantsSection() {
 }
 
 export function DashboardGrid() {
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  if (!isLoggedIn) return null;
+
   return (
     <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
       <div className="md:col-span-2">

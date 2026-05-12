@@ -10,11 +10,13 @@ import { ApiClientError } from "@/lib/api-client";
 import { toast } from "sonner";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { InlineSpinner } from "@/components/shared/InlineSpinner";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const PLACEHOLDER = "Начни исследование или задай вопрос...";
 
 export function Omnibar() {
   const router = useRouter();
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [value, setValue] = useState("");
   const [creating, setCreating] = useState(false);
   const showCreating = useMinimumPending(creating);
@@ -23,7 +25,7 @@ export function Omnibar() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const query = value.trim();
-    if (!query || creating) return;
+    if (!isLoggedIn || !query || creating) return;
     setCreating(true);
     try {
       const { id } = await createChat({ name: null });
@@ -56,13 +58,17 @@ export function Omnibar() {
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder={PLACEHOLDER}
-        disabled={creating || showCreating}
+        placeholder={
+          isLoggedIn ? PLACEHOLDER : "Войдите, чтобы создавать чаты и искать…"
+        }
+        disabled={!isLoggedIn || creating || showCreating}
         className={cn(
           "flex-1 border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground",
           "dark:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
         )}
-        aria-label={PLACEHOLDER}
+        aria-label={
+          isLoggedIn ? PLACEHOLDER : "Войдите, чтобы создавать чаты и искать"
+        }
         autoComplete="off"
       />
     </form>
