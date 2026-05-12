@@ -99,7 +99,7 @@ export function EditorBubbleMenu({
           if (from !== to) selectionSnapRef.current = { from, to };
         }}
         className={cn(
-          "relative flex min-h-23 min-w-[min(100%,22rem)] max-w-[min(100vw-2rem,32rem)] flex-col gap-2 overflow-hidden rounded-xl border border-border/80 bg-popover/85 p-2 pt-2.5 shadow-2xl ring-1 ring-border/60 backdrop-blur-xl dark:bg-popover/75"
+          "relative flex min-h-23 min-w-[min(100%,22rem)] max-w-[min(100vw-2rem,32rem)] flex-col gap-2 overflow-hidden rounded-xl border border-border/80 bg-popover/90 p-2 pt-2.5 shadow-md ring-1 ring-border/50 backdrop-blur-md dark:bg-popover/80"
         )}
       >
         <div

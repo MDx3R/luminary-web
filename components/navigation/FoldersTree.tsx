@@ -2,8 +2,8 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { notifyErrorFromUnknown } from "@/lib/feedback";
 import {
   ChevronRight,
   FilePlus,
@@ -33,7 +33,6 @@ import { CreateFolderDialog } from "@/components/folder/CreateFolderDialog";
 import { Button } from "@/components/ui/button";
 import { RenameFolderDialog } from "@/components/folder/RenameFolderDialog";
 import { RenameChatDialog } from "@/components/chat/RenameChatDialog";
-import { ApiClientError } from "@/lib/api-client";
 import type { FolderSummary } from "@/types/folder";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
@@ -61,6 +60,11 @@ function FolderRow({
   onRenameChatInFolder: (folderId: string, chatId: string, chatName: string) => void;
   onRemoveChatFromFolder: (folderId: string, chatId: string, chatName: string) => void;
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeChatId = searchParams.get("chat");
+  const isFolderPage = pathname === `/folder/${folder.id}`;
+  const isEditorRowActive = isFolderPage && !activeChatId;
   const chatsRegionId = useId();
   const { data: folderDetails } = useQuery({
     queryKey: queryKeys.folder(folder.id),
@@ -155,20 +159,31 @@ function FolderRow({
           <div className="group/chat flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
             <Link
               href={`/folder/${folder.id}`}
-              className="flex min-w-0 flex-1 items-center gap-2"
+              className={cn(
+                "flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 -mx-1 py-0.5 transition-colors",
+                isEditorRowActive &&
+                  "bg-sidebar-accent text-sidebar-accent-foreground"
+              )}
             >
               <FileText className="size-3.5 shrink-0 text-muted-foreground" />
               <span className="truncate">Редактор папки</span>
             </Link>
           </div>
-          {chats.map((chat) => (
+          {chats.map((chat) => {
+            const isChatRowActive =
+              isFolderPage && activeChatId === chat.id;
+            return (
             <div
               key={chat.id}
               className="group/chat flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <Link
                 href={`/folder/${folder.id}?chat=${chat.id}`}
-                className="flex min-w-0 flex-1 items-center gap-2"
+                className={cn(
+                  "flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 -mx-1 py-0.5 transition-colors",
+                  isChatRowActive &&
+                    "bg-sidebar-accent text-sidebar-accent-foreground"
+                )}
               >
                 <MessageCircle className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="truncate">{chat.name}</span>
@@ -212,7 +227,8 @@ function FolderRow({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          ))}
+            );
+          })}
         </div>
         )}
       </div>
@@ -264,9 +280,7 @@ export function FoldersTree() {
       }
     },
     onError: (err) => {
-      const msg =
-        err instanceof ApiClientError ? err.message : "Не удалось удалить папку.";
-      toast.error(msg);
+      notifyErrorFromUnknown(err, "Не удалось удалить папку.");
     },
   });
 
@@ -278,11 +292,7 @@ export function FoldersTree() {
       queryClient.invalidateQueries({ queryKey: queryKeys.folders });
     },
     onError: (err) => {
-      const msg =
-        err instanceof ApiClientError
-          ? err.message
-          : "Не удалось убрать чат из папки.";
-      toast.error(msg);
+      notifyErrorFromUnknown(err, "Не удалось убрать чат из папки.");
     },
   });
 

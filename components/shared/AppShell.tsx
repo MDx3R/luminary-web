@@ -30,9 +30,6 @@ export function AppShell({ children }: AppShellProps) {
   const toggleNavigationCollapsed = useNavigationStore(
     (s) => s.toggleNavigationCollapsed
   );
-  const toggleChatPanelCollapsed = useNavigationStore(
-    (s) => s.toggleChatPanelCollapsed
-  );
   const navigationPanelSize = useNavigationStore((s) => s.navigationPanelSize);
   const setNavigationPanelSize = useNavigationStore(
     (s) => s.setNavigationPanelSize
@@ -59,10 +56,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="sticky top-0 z-40 h-11 w-full shrink-0 border-b border-sidebar-border bg-sidebar" />
         }
       >
-        <Header
-          onToggleNavPanel={toggleNavigationCollapsed}
-          onToggleChatPanel={toggleChatPanelCollapsed}
-        />
+        <Header onToggleNavPanel={toggleNavigationCollapsed} />
       </Suspense>
       <div className="flex min-h-0 flex-1">
         <ActivityBar onToggleNavPanel={toggleNavigationCollapsed} />

@@ -6,8 +6,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { createChat } from "@/lib/api/chats-api";
-import { ApiClientError } from "@/lib/api-client";
-import { toast } from "sonner";
+import { notifyErrorFromUnknown } from "@/lib/feedback";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { InlineSpinner } from "@/components/shared/InlineSpinner";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -31,11 +30,7 @@ export function Omnibar() {
       const { id } = await createChat({ name: null });
       router.push(`/chat/${id}?q=${encodeURIComponent(query)}`);
     } catch (err) {
-      toast.error(
-        err instanceof ApiClientError
-          ? err.message
-          : "Не удалось создать чат."
-      );
+      notifyErrorFromUnknown(err, "Не удалось создать чат.");
     } finally {
       setCreating(false);
     }

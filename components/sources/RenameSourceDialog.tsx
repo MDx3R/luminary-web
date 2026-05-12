@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -41,7 +40,6 @@ export function RenameSourceDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.sources });
       onOpenChange(false);
-      toast.success("Источник переименован");
     },
     onError: (err) => {
       setError(

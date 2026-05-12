@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { toast } from "sonner";
+import { notifyErrorFromUnknown } from "@/lib/feedback";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { BookMarked, FileUp, Link as LinkIcon } from "lucide-react";
 import {
@@ -37,7 +37,6 @@ import {
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { RenameSourceDialog } from "@/components/sources/RenameSourceDialog";
 import { SourceItem } from "@/components/sources/SourceItem";
-import { ApiClientError } from "@/lib/api-client";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
@@ -71,15 +70,41 @@ export function AttachSourceModal() {
     id: string;
     title: string;
   } | null>(null);
+  const [inlineNotice, setInlineNotice] = useState<string | null>(null);
+  const noticeClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showNotice(text: string) {
+    if (noticeClearRef.current) clearTimeout(noticeClearRef.current);
+    setInlineNotice(text);
+    noticeClearRef.current = setTimeout(() => {
+      noticeClearRef.current = null;
+      setInlineNotice(null);
+    }, 2800);
+  }
 
   useEffect(() => {
-    if (addSourceModalOpen && attachInitialStep === "upload") {
-      queueMicrotask(() => {
-        setStep("upload");
-        clearAttachInitialStep();
-      });
-    }
+    return () => {
+      if (noticeClearRef.current) clearTimeout(noticeClearRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!addSourceModalOpen) return;
+    if (attachInitialStep !== "upload") return;
+    queueMicrotask(() => {
+      setStep("upload");
+      clearAttachInitialStep();
+    });
   }, [addSourceModalOpen, attachInitialStep, clearAttachInitialStep]);
+
+  useEffect(() => {
+    if (addSourceModalOpen) return;
+    setInlineNotice(null);
+    if (noticeClearRef.current) {
+      clearTimeout(noticeClearRef.current);
+      noticeClearRef.current = null;
+    }
+  }, [addSourceModalOpen]);
 
   const { data: sources = [], isLoading: sourcesLoading } = useQuery({
     queryKey: queryKeys.sources,
@@ -124,12 +149,10 @@ export function AttachSourceModal() {
       if (folderId)
         queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.sources });
-      toast.success("Источник убран из папки");
+      showNotice("Источник убран из папки");
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiClientError ? err.message : "Не удалось убрать источник из папки."
-      );
+      notifyErrorFromUnknown(err, "Не удалось убрать источник из папки.");
     },
   });
   const addToChatMutation = useMutation({
@@ -147,12 +170,10 @@ export function AttachSourceModal() {
       if (chatId)
         queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.sources });
-      toast.success("Источник убран из чата");
+      showNotice("Источник убран из чата");
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiClientError ? err.message : "Не удалось убрать источник из чата."
-      );
+      notifyErrorFromUnknown(err, "Не удалось убрать источник из чата.");
     },
   });
 
@@ -199,12 +220,10 @@ export function AttachSourceModal() {
         queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
       if (chatId)
         queryClient.invalidateQueries({ queryKey: queryKeys.chat(chatId) });
-      toast.success("Источник удалён");
+      showNotice("Источник удалён");
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiClientError ? err.message : "Не удалось удалить источник."
-      );
+      notifyErrorFromUnknown(err, "Не удалось удалить источник.");
     },
   });
 
@@ -284,6 +303,15 @@ export function AttachSourceModal() {
               Создание файла или ссылки и привязка к папке или чату.
             </DialogDescription>
           </DialogHeader>
+          {inlineNotice ? (
+            <p
+              className="border-b border-border px-5 py-2 text-center text-xs text-muted-foreground"
+              role="status"
+              aria-live="polite"
+            >
+              {inlineNotice}
+            </p>
+          ) : null}
           <div className="flex flex-col gap-4 p-5">
             {uploadKind === "choose" && (
               <>
@@ -410,6 +438,15 @@ export function AttachSourceModal() {
             Выбор существующего источника из библиотеки для привязки к папке или чату.
           </DialogDescription>
         </DialogHeader>
+        {inlineNotice ? (
+          <p
+            className="border-b border-border px-5 py-2 text-center text-xs text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            {inlineNotice}
+          </p>
+        ) : null}
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col items-center p-5 pt-4">
             {showSourcesLoading ? (

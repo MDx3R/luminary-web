@@ -21,3 +21,11 @@
 ## Popover
 
 Отдельного `popover.tsx` пока нет; токены `--popover` используются поверхностью меню. При появлении первого кейса «якорь + контент, но не меню» — добавить примитив на `@base-ui/react` в том же стиле, что `Dialog` / `Menu`.
+
+## Обратная связь (toast vs inline)
+
+- **Серьёзные ошибки** (сеть, сохранение, сбой API): [`lib/feedback.ts`](../../lib/feedback.ts) — `notifyError` / `notifyErrorFromUnknown` → Sonner.
+- **Мелкие успехи** (копирование, «добавлено в источники» у кнопки): только **inline** в компоненте; не вызывать `toast.success` для этого.
+- **a11y:** не дублировать один и тот же текст и в toast, и в `aria-live` без необходимости.
+
+Общий backdrop модалок: `appDialogOverlayClassName` в `dialog.tsx` (используется и в `sheet.tsx`).

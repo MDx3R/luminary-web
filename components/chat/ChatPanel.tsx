@@ -9,13 +9,7 @@ import {
   type ComponentProps,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  SendHorizontal,
-  Square,
-  Copy,
-  RotateCcw,
-  Check,
-} from "lucide-react";
+import { SendHorizontal, Square, Copy, RotateCcw, Check } from "lucide-react";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { InlineSpinner } from "@/components/shared/InlineSpinner";
 import ReactMarkdown from "react-markdown";
@@ -26,6 +20,7 @@ import { useChatStore } from "@/store/useChatStore";
 import { useSourcesStore } from "@/store/useSourcesStore";
 import {
   getChat,
+  listMessages,
   sendMessage,
   getMessageResponseStream,
   cancelMessage,
@@ -35,14 +30,11 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { AssistantSelector } from "@/components/assistants/AssistantSelector";
-import { toast } from "sonner";
-import { ApiClientError } from "@/lib/api-client";
+import { notifyError, notifyErrorFromUnknown } from "@/lib/feedback";
 import { cn } from "@/lib/utils";
 import { isStreamingMessageStatus } from "@/lib/chat-stream-status";
 import { consumeAssistantMessageStream } from "@/lib/assistant-message-stream";
 import type { ChatMessage } from "@/types/chat";
-
-const GENERATING_PLACEHOLDER_MIN_MS = 400;
 
 /** Stable empty array for store selector to avoid getSnapshot loop when chat has no messages */
 const EMPTY_MESSAGES: ChatMessage[] = [];
@@ -145,6 +137,22 @@ export function ChatPanel({
     enabled: Boolean(currentChatId),
   });
 
+  const {
+    isPending: messagesQueryPending,
+    isFetching: messagesQueryFetching,
+    data: messagesQueryData,
+  } = useQuery({
+    queryKey: queryKeys.messages(currentChatId ?? ""),
+    queryFn: () => listMessages(currentChatId!),
+    enabled: Boolean(currentChatId),
+  });
+
+  const showThreadLoading =
+    Boolean(currentChatId) &&
+    messages.length === 0 &&
+    (messagesQueryPending ||
+      (messagesQueryFetching && messagesQueryData === undefined));
+
   const assistantMutation = useMutation({
     mutationFn: async (assistantId: string | null) => {
       if (!currentChatId) return;
@@ -162,11 +170,7 @@ export function ChatPanel({
       queryClient.invalidateQueries({ queryKey: queryKeys.chats });
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiClientError
-          ? err.message
-          : "Не удалось изменить ассистента"
-      );
+      notifyErrorFromUnknown(err, "Не удалось изменить ассистента");
     },
   });
 
@@ -364,7 +368,14 @@ export function ChatPanel({
         )}
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col gap-4 p-4">
-            {messages.length === 0 ? (
+            {showThreadLoading ? (
+              <div className="flex flex-col items-center gap-2 py-12">
+                <InlineSpinner className="size-6 text-muted-foreground" />
+                <p className="text-center text-sm text-muted-foreground">
+                  Загрузка сообщений…
+                </p>
+              </div>
+            ) : messages.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-8">
                 <p className="text-center text-sm text-muted-foreground">
                   Начните диалог — напишите сообщение или выберите подсказку.
@@ -488,8 +499,6 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
   const isGenerating =
     message.role === "assistant" &&
     isStreamingMessageStatus(message.status);
-  const isStreamingDelta =
-    message.role === "assistant" && message.status === "streaming";
   const isFailed = message.status === "failed";
   const isCancelled = message.status === "cancelled";
   const showMessageActions =
@@ -498,8 +507,10 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
     !isCancelled &&
     (Boolean(message.content) || message.attachments.length > 0);
 
-  const generatingStartedAtRef = useRef<number | null>(null);
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const contentTrimmed = (message.content ?? "").trim();
+  const showPlaceholder = isGenerating && !contentTrimmed;
+  const hasStreamingBody = isGenerating && Boolean(contentTrimmed);
+
   const [copyDone, setCopyDone] = useState(false);
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -512,40 +523,21 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
   const handleCopyMessage = useCallback(async () => {
     const text = buildMessageCopyText(message);
     if (!text) {
-      toast.error("Нечего копировать");
+      notifyError("Нечего копировать");
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("Текст скопирован");
       setCopyDone(true);
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
       copyResetRef.current = setTimeout(() => {
         copyResetRef.current = null;
         setCopyDone(false);
       }, 2000);
-    } catch {
-      toast.error("Не удалось скопировать");
+    } catch (err) {
+      notifyErrorFromUnknown(err, "Не удалось скопировать");
     }
   }, [message]);
-
-  useEffect(() => {
-    if (isGenerating) {
-      if (generatingStartedAtRef.current === null) {
-        generatingStartedAtRef.current = Date.now();
-      }
-      const t = setTimeout(
-        () => setMinTimeElapsed(true),
-        GENERATING_PLACEHOLDER_MIN_MS
-      );
-      return () => clearTimeout(t);
-    }
-    generatingStartedAtRef.current = null;
-    queueMicrotask(() => setMinTimeElapsed(false));
-    return undefined;
-  }, [isGenerating]);
-
-  const showPlaceholder = isGenerating && (!message.content || !minTimeElapsed);
 
   return (
     <div
@@ -575,7 +567,7 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
         {showPlaceholder && (
           <span className="text-muted-foreground animate-pulse">Думаю…</span>
         )}
-        {!showPlaceholder && isStreamingDelta && message.content && (
+        {hasStreamingBody && (
           <>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
@@ -619,7 +611,7 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
         </div>
       )}
       {showMessageActions && (
-        <div className="flex shrink-0 flex-wrap gap-1 border-t border-border/40 bg-muted/10 px-2 py-1.5 opacity-90 transition-opacity group-hover/msg:opacity-100">
+        <div className="flex shrink-0 flex-wrap gap-1 border-t border-border/40 bg-muted/10 px-2 py-1.5 opacity-100">
           <Button
             type="button"
             variant="ghost"
@@ -627,8 +619,13 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
             className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
             onClick={() => void handleCopyMessage()}
             aria-label="Копировать текст сообщения"
+            aria-live="polite"
           >
-            <Copy className="size-3.5 shrink-0" />
+            {copyDone ? (
+              <Check className="size-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <Copy className="size-3.5 shrink-0" />
+            )}
             {copyDone ? "Скопировано" : "Копировать"}
           </Button>
           {!isUser && (

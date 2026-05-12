@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { toast } from "sonner";
+import { notifyErrorFromUnknown } from "@/lib/feedback";
 import { FilePlus, MessageCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,6 @@ import { queryKeys } from "@/lib/query-keys";
 import { useSourcesStore } from "@/store/useSourcesStore";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { RenameChatDialog } from "@/components/chat/RenameChatDialog";
-import { ApiClientError } from "@/lib/api-client";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
 
@@ -41,12 +40,9 @@ export function StandaloneChatsList() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.chats });
       if (pathname === `/chat/${id}`) router.push("/dashboard");
-      toast.success("Чат удалён");
     },
     onError: (err) => {
-      const msg =
-        err instanceof ApiClientError ? err.message : "Не удалось удалить чат.";
-      toast.error(msg);
+      notifyErrorFromUnknown(err, "Не удалось удалить чат.");
     },
   });
 
@@ -65,7 +61,9 @@ export function StandaloneChatsList() {
   return (
     <>
       <div className="flex flex-col gap-0.5 py-1">
-        {chats.map((chat) => (
+        {chats.map((chat) => {
+          const isActiveChat = pathname === `/chat/${chat.id}`;
+          return (
           <div
             key={chat.id}
             className={cn(
@@ -75,7 +73,11 @@ export function StandaloneChatsList() {
           >
             <Link
               href={`/chat/${chat.id}`}
-              className="flex min-w-0 flex-1 items-center gap-2"
+              className={cn(
+                "flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 -mx-1 py-0.5 transition-colors",
+                isActiveChat &&
+                  "bg-sidebar-accent text-sidebar-accent-foreground"
+              )}
             >
               <MessageCircle className="size-4 shrink-0 text-muted-foreground" />
               <span className="truncate">{chat.name}</span>
@@ -119,7 +121,8 @@ export function StandaloneChatsList() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        ))}
+          );
+        })}
       </div>
       <ConfirmDeleteDialog
         open={!!chatToDelete}

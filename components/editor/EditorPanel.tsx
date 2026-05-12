@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
-import { toast } from "sonner";
+import { notifyError, notifyErrorFromUnknown } from "@/lib/feedback";
 import type { Editor } from "@tiptap/core";
 import { FolderToolbar } from "@/components/folder/FolderToolbar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -74,7 +74,7 @@ export function EditorPanel() {
         err instanceof ApiClientError
           ? err.message
           : "Не удалось сохранить изменения.";
-      toast.error(message);
+      notifyError(message);
     }
   }, [folderId, setSaveStatus, setFolder]);
 
@@ -108,7 +108,7 @@ export function EditorPanel() {
       const run = async (instruction: string) => {
         const fid = folderId;
         if (!fid) {
-          toast.error("Откройте папку с документом.");
+          notifyError("Откройте папку с документом.");
           return;
         }
         const anchor = {
@@ -141,8 +141,9 @@ export function EditorPanel() {
           }
         } catch (err) {
           if (signal.aborted) return;
-          toast.error(
-            err instanceof Error ? err.message : "Не удалось выполнить запрос."
+          notifyErrorFromUnknown(
+            err,
+            "Не удалось выполнить запрос."
           );
         } finally {
           setInlineBusy(false);
@@ -187,6 +188,9 @@ export function EditorPanel() {
               getBubbleMenuCallbacks={getBubbleMenuCallbacks}
               bubbleInlineAiBusy={inlineBusy}
             />
+            <p className="mt-3 text-center text-[11px] leading-snug text-muted-foreground">
+              Подсказка автодополнения: Tab — принять · Esc — отменить
+            </p>
           </div>
         </div>
       </ScrollArea>

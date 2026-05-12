@@ -167,6 +167,9 @@
 .prose-editor.ProseMirror:focus {
   @apply outline-none;
 }
+.prose-editor.ProseMirror:focus-visible {
+  @apply rounded-sm ring-2 ring-ring/40 ring-offset-2 ring-offset-background outline-none;
+}
 .prose-editor.ProseMirror p {
   @apply my-1;
 }

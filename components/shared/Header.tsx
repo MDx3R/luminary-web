@@ -18,25 +18,17 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useFolderStore } from "@/store/useFolderStore";
 import { useNavigationStore } from "@/store/useNavigationStore";
-import {
-  LogOutIcon,
-  UserIcon,
-  PanelLeftClose,
-  PanelLeft,
-  PanelRightClose,
-  PanelRight,
-} from "lucide-react";
+import { LogOutIcon, UserIcon, PanelLeftClose, PanelLeft } from "lucide-react";
+import { HeaderContextTitle } from "@/components/shared/HeaderContextTitle";
 
 type AuthMode = "login" | "register";
 
 interface HeaderProps {
   onToggleNavPanel?: () => void;
-  onToggleChatPanel?: () => void;
 }
 
-export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
+export function Header({ onToggleNavPanel }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -49,10 +41,6 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   const navigationPanelCollapsed = useNavigationStore(
     (s) => s.navigationPanelCollapsed
   );
-  const chatPanelCollapsed = useNavigationStore((s) => s.chatPanelCollapsed);
-  const folderHasChats = useFolderStore((s) => s.folderHasChats);
-
-  const isFolderView = pathname?.startsWith("/folder/") ?? false;
 
   useEffect(() => {
     const auth = searchParams.get("auth");
@@ -73,13 +61,13 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-11 w-full shrink-0 items-center justify-between gap-2 border-b border-sidebar-border bg-sidebar px-3">
+    <header className="sticky top-0 z-40 grid h-11 w-full shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-sidebar-border bg-sidebar px-3">
       <AuthDialog
         open={authOpen}
         onOpenChange={setAuthOpen}
         defaultMode={authDefaultMode}
       />
-      <div className="flex min-w-0 flex-1 items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1">
         {onToggleNavPanel && (
           <Tooltip>
             <TooltipTrigger
@@ -108,34 +96,11 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
             </TooltipContent>
           </Tooltip>
         )}
-        {isFolderView && folderHasChats && onToggleChatPanel && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="shrink-0"
-                  onClick={onToggleChatPanel}
-                  aria-label={
-                    chatPanelCollapsed ? "Показать чат" : "Скрыть чат"
-                  }
-                >
-                  {chatPanelCollapsed ? (
-                    <PanelRight className="size-5" />
-                  ) : (
-                    <PanelRightClose className="size-5" />
-                  )}
-                </Button>
-              }
-            />
-            <TooltipContent side="bottom" sideOffset={4}>
-              {chatPanelCollapsed ? "Показать чат" : "Скрыть чат"}
-            </TooltipContent>
-          </Tooltip>
-        )}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex min-w-0 justify-center px-1">
+        <HeaderContextTitle />
+      </div>
+      <div className="flex shrink-0 items-center justify-end gap-2">
         {!sessionResolved ? (
           <div
             className="h-8 w-20 rounded-lg bg-muted/50 animate-pulse"
@@ -169,7 +134,7 @@ export function Header({ onToggleNavPanel, onToggleChatPanel }: HeaderProps) {
                 variant="destructive"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleLogout();
+                  void handleLogout();
                 }}
               >
                 <LogOutIcon className="size-4" />

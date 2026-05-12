@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { notifyErrorFromUnknown } from "@/lib/feedback";
 import { Plus } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,7 +19,6 @@ import { removeSourceFromFolder } from "@/lib/api/folders-api";
 import { queryKeys } from "@/lib/query-keys";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { SourceItem } from "./SourceItem";
-import { ApiClientError } from "@/lib/api-client";
 
 export function SourcesPanel() {
   const queryClient = useQueryClient();
@@ -42,14 +41,12 @@ export function SourcesPanel() {
       if (folderId)
         queryClient.invalidateQueries({ queryKey: queryKeys.folder(folderId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.sources });
-      toast.success("Источник убран из папки");
     },
     onError: (err) => {
-      const msg =
-        err instanceof ApiClientError
-          ? err.message
-          : "Не удалось убрать источник из папки.";
-      toast.error(msg);
+      notifyErrorFromUnknown(
+        err,
+        "Не удалось убрать источник из папки."
+      );
     },
   });
 

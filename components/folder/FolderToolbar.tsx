@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Loader2, Circle } from "lucide-react";
+import { Check, Circle } from "lucide-react";
+import { InlineSpinner } from "@/components/shared/InlineSpinner";
 import { useFolderStore } from "@/store/useFolderStore";
 import type { SaveStatus } from "@/types/folder";
 
@@ -14,7 +15,7 @@ function SaveStatusIcon({ status }: { status: SaveStatus }) {
   if (status === "saved")
     return <Check className="size-3.5 text-muted-foreground" />;
   if (status === "saving")
-    return <Loader2 className="size-3.5 animate-spin text-muted-foreground" />;
+    return <InlineSpinner className="size-3.5 text-muted-foreground" />;
   return <Circle className="size-3 text-muted-foreground" />;
 }
 

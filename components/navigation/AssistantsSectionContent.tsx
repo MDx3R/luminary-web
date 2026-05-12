@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,7 @@ import { AssistantItem } from "@/components/assistants/AssistantItem";
 import { useAssistantsUiStore } from "@/store/useAssistantsUiStore";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import type { AssistantSummary } from "@/types/assistant";
-import { ApiClientError } from "@/lib/api-client";
-import { toast } from "sonner";
+import { notifyErrorFromUnknown } from "@/lib/feedback";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
 import { Copy, Library } from "lucide-react";
@@ -26,6 +25,24 @@ export function AssistantsSectionContent() {
   const queryClient = useQueryClient();
   const openAssistantEditor = useAssistantsUiStore((s) => s.openAssistantEditor);
   const [tab, setTab] = useState<"mine" | "catalog">("mine");
+  const [inlineNotice, setInlineNotice] = useState<string | null>(null);
+  const noticeClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showNotice(text: string) {
+    if (noticeClearRef.current) clearTimeout(noticeClearRef.current);
+    setInlineNotice(text);
+    noticeClearRef.current = setTimeout(() => {
+      noticeClearRef.current = null;
+      setInlineNotice(null);
+    }, 2500);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (noticeClearRef.current) clearTimeout(noticeClearRef.current);
+    };
+  }, []);
+
   const [deletingAssistant, setDeletingAssistant] = useState<{
     id: string;
     name: string;
@@ -47,12 +64,10 @@ export function AssistantsSectionContent() {
     mutationFn: (id: string) => cloneAssistant(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.assistants });
-      toast.success("Ассистент добавлен в ваш список");
+      showNotice("Ассистент добавлен в ваш список");
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiClientError ? err.message : "Не удалось клонировать"
-      );
+      notifyErrorFromUnknown(err, "Не удалось клонировать");
     },
   });
 
@@ -61,12 +76,10 @@ export function AssistantsSectionContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.assistants });
       queryClient.invalidateQueries({ queryKey: queryKeys.assistantsPublic });
-      toast.success("Ассистент опубликован в каталоге");
+      showNotice("Ассистент опубликован в каталоге");
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiClientError ? err.message : "Не удалось опубликовать"
-      );
+      notifyErrorFromUnknown(err, "Не удалось опубликовать");
     },
   });
 
@@ -76,12 +89,10 @@ export function AssistantsSectionContent() {
       queryClient.invalidateQueries({ queryKey: queryKeys.assistants });
       queryClient.invalidateQueries({ queryKey: queryKeys.assistantsPublic });
       setDeletingAssistant(null);
-      toast.success("Ассистент удалён");
+      showNotice("Ассистент удалён");
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiClientError ? err.message : "Не удалось удалить ассистента"
-      );
+      notifyErrorFromUnknown(err, "Не удалось удалить ассистента");
     },
   });
 
@@ -99,6 +110,15 @@ export function AssistantsSectionContent() {
 
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+      {inlineNotice ? (
+        <p
+          className="mx-2 shrink-0 rounded-md border border-border bg-muted/40 px-2 py-1.5 text-center text-xs text-muted-foreground"
+          role="status"
+          aria-live="polite"
+        >
+          {inlineNotice}
+        </p>
+      ) : null}
       <div className="flex shrink-0 gap-1 px-2 pt-1">
         <Button
           type="button"

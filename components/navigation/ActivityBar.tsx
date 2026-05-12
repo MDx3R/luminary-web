@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   FileStack,
@@ -67,8 +68,10 @@ interface ActivityBarProps {
 }
 
 export function ActivityBar({ onToggleNavPanel }: ActivityBarProps = {}) {
+  const pathname = usePathname()
   const activeSection = useNavigationStore((s) => s.activeSection)
   const setActiveSection = useNavigationStore((s) => s.setActiveSection)
+  const dashboardActive = pathname === "/dashboard" || pathname === "/"
 
   function handleSectionClick(id: ActivitySection) {
     const isActive = activeSection === id
@@ -91,9 +94,20 @@ export function ActivityBar({ onToggleNavPanel }: ActivityBarProps = {}) {
               <Link
                 href="/dashboard"
                 aria-label="Дашборд"
-                className="flex size-14 w-full items-center justify-center rounded-none text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                aria-current={dashboardActive ? "page" : undefined}
+                className={cn(
+                  "relative flex size-14 w-full items-center justify-center rounded-none text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  dashboardActive &&
+                    "text-sidebar-accent-foreground"
+                )}
               >
-                <LayoutDashboard className="size-5" />
+                {dashboardActive && (
+                  <span
+                    className="absolute left-0 top-1/2 h-8 w-0.5 -translate-y-1/2 rounded-r bg-primary"
+                    aria-hidden
+                  />
+                )}
+                <LayoutDashboard className="size-5 shrink-0" />
               </Link>
             }
           />

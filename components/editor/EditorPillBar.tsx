@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { notifyError, notifyErrorFromUnknown } from "@/lib/feedback";
 import { FileDown, BookMarked, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFolderStore } from "@/store/useFolderStore";
@@ -14,7 +15,6 @@ import {
 import { createFileSource } from "@/lib/api/sources-api";
 import { queryKeys } from "@/lib/query-keys";
 import { AssistantSelector } from "@/components/assistants/AssistantSelector";
-import { ApiClientError } from "@/lib/api-client";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { InlineSpinner } from "@/components/shared/InlineSpinner";
 
@@ -23,6 +23,15 @@ export function EditorPillBar() {
   const currentFolder = useFolderStore((s) => s.currentFolder);
   const pendingEditorText = useFolderStore((s) => s.pendingEditorText);
   const setSourcesPanelOpen = useSourcesStore((s) => s.setSourcesPanelOpen);
+  const [sourceSavedFlash, setSourceSavedFlash] = useState(false);
+  const sourceFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (sourceFlashTimerRef.current)
+        clearTimeout(sourceFlashTimerRef.current);
+    };
+  }, []);
 
   const assistantMutation = useMutation({
     mutationFn: async (assistantId: string | null) => {
@@ -41,11 +50,7 @@ export function EditorPillBar() {
       queryClient.invalidateQueries({ queryKey: queryKeys.folders });
     },
     onError: (err) => {
-      toast.error(
-        err instanceof ApiClientError
-          ? err.message
-          : "Не удалось изменить ассистента"
-      );
+      notifyErrorFromUnknown(err, "Не удалось изменить ассистента");
     },
   });
 
@@ -68,18 +73,20 @@ export function EditorPillBar() {
       if (!currentFolder?.id) return;
       queryClient.invalidateQueries({ queryKey: queryKeys.sources });
       queryClient.invalidateQueries({ queryKey: queryKeys.folder(currentFolder.id) });
-      toast.success("Документ добавлен в источники папки");
+      if (sourceFlashTimerRef.current)
+        clearTimeout(sourceFlashTimerRef.current);
+      setSourceSavedFlash(true);
+      sourceFlashTimerRef.current = setTimeout(() => {
+        sourceFlashTimerRef.current = null;
+        setSourceSavedFlash(false);
+      }, 2200);
     },
     onError: (err) => {
       if (err instanceof Error && err.message === "EMPTY") {
-        toast.error("Нет текста для сохранения.");
+        notifyError("Нет текста для сохранения.");
         return;
       }
-      toast.error(
-        err instanceof ApiClientError
-          ? err.message
-          : "Не удалось сохранить как источник"
-      );
+      notifyErrorFromUnknown(err, "Не удалось сохранить как источник");
     },
   });
 
@@ -147,10 +154,12 @@ export function EditorPillBar() {
         >
           {showSaveSourcePending ? (
             <InlineSpinner className="size-4" />
+          ) : sourceSavedFlash ? (
+            <BookMarked className="size-4 text-muted-foreground" />
           ) : (
             <FileUp className="size-4" />
           )}
-          В источники
+          {sourceSavedFlash ? "Сохранено" : "В источники"}
         </Button>
         <Button
           variant="ghost"
