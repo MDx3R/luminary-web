@@ -100,7 +100,7 @@ export function Header({ onToggleNavPanel }: HeaderProps) {
       <div className="flex min-w-0 justify-center px-1">
         <HeaderContextTitle />
       </div>
-      <div className="flex shrink-0 items-center justify-end gap-2">
+      <div className="flex shrink-0 items-center justify-end gap-2 pr-1 sm:pr-2">
         {!sessionResolved ? (
           <div
             className="h-8 w-20 rounded-lg bg-muted/50 animate-pulse"

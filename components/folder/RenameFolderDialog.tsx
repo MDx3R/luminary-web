@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -41,6 +41,12 @@ export function RenameFolderDialog({
   const setFolder = useFolderStore((s) => s.setFolder);
   const [name, setName] = useState(folderName);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(folderName);
+    setError(null);
+  }, [open, folderId, folderName]);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -98,17 +104,15 @@ export function RenameFolderDialog({
             <label htmlFor="rename-folder-name" className="text-sm font-medium">
               Название
             </label>
-            <div className="flex justify-center">
-              <Input
-                id="rename-folder-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Название папки"
-                aria-invalid={!!error}
-                className="w-full min-w-0 max-w-[240px]"
-                disabled={showPending}
-              />
-            </div>
+            <Input
+              id="rename-folder-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Название папки"
+              aria-invalid={!!error}
+              className="w-full min-w-0"
+              disabled={showPending}
+            />
           </div>
           <DialogFooter className="p-0 pt-2 flex flex-row justify-end gap-2">
             <Button

@@ -1,9 +1,9 @@
 "use client";
 
-import { Bot, Pencil, Trash2, Share2 } from "lucide-react";
+import { Pencil, Trash2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AssistantSummary } from "@/types/assistant";
-import { cn } from "@/lib/utils";
+import { AssistantLibraryCard } from "@/components/assistants/AssistantLibraryCard";
 
 interface AssistantItemProps {
   assistant: AssistantSummary;
@@ -22,57 +22,40 @@ export function AssistantItem({
   publishPending,
 }: AssistantItemProps) {
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm"
-      )}
-    >
-      <span className="shrink-0 text-muted-foreground" aria-hidden>
-        <Bot className="size-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-foreground">{assistant.name}</p>
-        {assistant.description ? (
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {assistant.description}
-          </p>
-        ) : null}
-        {assistant.type ? (
-          <span className="mt-1 inline-block text-xs text-muted-foreground/80">
-            {assistant.type}
-          </span>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 items-center gap-0.5">
-        {onPublish && assistant.type !== "public" ? (
+    <AssistantLibraryCard
+      assistant={assistant}
+      actions={
+        <>
+          {onPublish && assistant.type !== "public" ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onPublish}
+              disabled={publishPending}
+              aria-label={`Опубликовать «${assistant.name}»`}
+              title="Опубликовать в каталоге"
+            >
+              <Share2 className="size-4 text-muted-foreground" />
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={onPublish}
-            disabled={publishPending}
-            aria-label={`Опубликовать «${assistant.name}»`}
-            title="Опубликовать в каталоге"
+            onClick={() => onEdit(assistant)}
+            aria-label={`Редактировать «${assistant.name}»`}
           >
-            <Share2 className="size-4 text-muted-foreground" />
+            <Pencil className="size-4 text-muted-foreground" />
           </Button>
-        ) : null}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => onEdit(assistant)}
-          aria-label={`Редактировать «${assistant.name}»`}
-        >
-          <Pencil className="size-4 text-muted-foreground" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => onDelete(assistant)}
-          aria-label={`Удалить «${assistant.name}»`}
-        >
-          <Trash2 className="size-4 text-muted-foreground" />
-        </Button>
-      </div>
-    </div>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => onDelete(assistant)}
+            aria-label={`Удалить «${assistant.name}»`}
+          >
+            <Trash2 className="size-4 text-muted-foreground" />
+          </Button>
+        </>
+      }
+    />
   );
 }

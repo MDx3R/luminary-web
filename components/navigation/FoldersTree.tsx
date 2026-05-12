@@ -175,15 +175,15 @@ function FolderRow({
             return (
             <div
               key={chat.id}
-              className="group/chat flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              className={cn(
+                "group/chat flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isChatRowActive &&
+                  "bg-sidebar-accent text-sidebar-accent-foreground"
+              )}
             >
               <Link
                 href={`/folder/${folder.id}?chat=${chat.id}`}
-                className={cn(
-                  "flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 -mx-1 py-0.5 transition-colors",
-                  isChatRowActive &&
-                    "bg-sidebar-accent text-sidebar-accent-foreground"
-                )}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1 -mx-1 py-0.5 transition-colors"
               >
                 <MessageCircle className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="truncate">{chat.name}</span>

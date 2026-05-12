@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -38,6 +38,12 @@ export function RenameChatDialog({
   const queryClient = useQueryClient();
   const [name, setName] = useState(chatName);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(chatName);
+    setError(null);
+  }, [open, chatId, chatName]);
 
   const mutation = useMutation({
     mutationFn: () => updateChatName(chatId!, { name: name.trim() }),
@@ -94,17 +100,15 @@ export function RenameChatDialog({
             <label htmlFor="rename-chat-name" className="text-sm font-medium">
               Название
             </label>
-            <div className="flex justify-center">
-              <Input
-                id="rename-chat-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Название чата"
-                aria-invalid={!!error}
-                className="w-full min-w-0 max-w-[240px]"
-                disabled={showPending}
-              />
-            </div>
+            <Input
+              id="rename-chat-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Название чата"
+              aria-invalid={!!error}
+              className="w-full min-w-0"
+              disabled={showPending}
+            />
           </div>
           <DialogFooter className="p-0 pt-2 flex flex-row justify-end gap-2">
             <Button

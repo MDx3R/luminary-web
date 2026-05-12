@@ -28,18 +28,10 @@ import {
   deleteSource,
 } from "@/lib/api/sources-api";
 import { queryKeys } from "@/lib/query-keys";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
-import { RenameSourceDialog } from "@/components/sources/RenameSourceDialog";
-import { SourceItem } from "@/components/sources/SourceItem";
+import { SourceAttachCard } from "@/components/sources/SourceAttachCard";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { Source } from "@/types/source";
 
 type AttachStep = "list" | "upload";
@@ -61,10 +53,6 @@ export function AttachSourceModal() {
   const [sourceToRemove, setSourceToRemove] = useState<{
     sourceId: string;
     sourceTitle: string;
-  } | null>(null);
-  const [sourceToRename, setSourceToRename] = useState<{
-    id: string;
-    title: string;
   } | null>(null);
   const [sourceToDelete, setSourceToDelete] = useState<{
     id: string;
@@ -448,14 +436,14 @@ export function AttachSourceModal() {
           </p>
         ) : null}
         <ScrollArea className="flex-1 min-h-0">
-          <div className="flex flex-col items-center p-5 pt-4">
+          <div className="flex w-full flex-col p-5 pt-4">
             {showSourcesLoading ? (
               <div className="py-4">
                 <ListLoadingRow label="Загрузка источников…" className="text-sm" />
               </div>
             ) : (
               <>
-                <ul className="flex w-full max-w-[280px] flex-col gap-2">
+                <ul className="m-0 flex w-full max-w-md list-none flex-col gap-3 p-0">
                   {sources.length === 0 ? (
                     <p className="py-2 text-center text-sm text-muted-foreground">
                       Нет источников. Загрузите новый ниже.
@@ -463,61 +451,30 @@ export function AttachSourceModal() {
                   ) : (
                     sources.map((source: Source) => {
                       const isAttached = attachedSourceIds.has(source.id);
-                      const isPending =
+                      const attachBusy =
                         addToFolderMutation.isPending ||
                         removeFromFolderMutation.isPending ||
                         addToChatMutation.isPending ||
                         removeFromChatMutation.isPending ||
                         deleteSourceMutation.isPending;
                       return (
-                        <li
-                          key={source.id}
-                          className="flex items-center gap-1 rounded-lg border border-border bg-background"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <SourceItem
-                              source={source}
-                              selectable
-                              checked={isAttached}
-                              onCheckedChange={(checked) =>
-                                handleCheckedChange(source.id, checked)
-                              }
-                              disabled={isPending}
-                            />
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              className="shrink-0 rounded p-1 hover:bg-muted"
-                              onClick={(e) => e.preventDefault()}
-                            >
-                              <MoreHorizontal className="size-4" />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" sideOffset={4}>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setSourceToRename({
-                                    id: source.id,
-                                    title: source.title ?? "Источник",
-                                  })
-                                }
-                              >
-                                <Pencil className="size-3.5" />
-                                Переименовать
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() =>
-                                  setSourceToDelete({
-                                    id: source.id,
-                                    title: source.title ?? "Источник",
-                                  })
-                                }
-                              >
-                                <Trash2 className="size-3.5" />
-                                Удалить источник
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                        <li key={source.id} className="w-full">
+                          <SourceAttachCard
+                            source={source}
+                            checked={isAttached}
+                            onCheckedChange={(checked) =>
+                              handleCheckedChange(source.id, checked)
+                            }
+                            attachBusy={attachBusy}
+                            folderId={folderId}
+                            chatId={chatId}
+                            onRequestDelete={() =>
+                              setSourceToDelete({
+                                id: source.id,
+                                title: source.title ?? "Источник",
+                              })
+                            }
+                          />
                         </li>
                       );
                     })
@@ -558,13 +515,6 @@ export function AttachSourceModal() {
       isPending={
         removeFromFolderMutation.isPending || removeFromChatMutation.isPending
       }
-    />
-    <RenameSourceDialog
-      key={sourceToRename?.id ?? "closed"}
-      open={!!sourceToRename}
-      onOpenChange={(open) => !open && setSourceToRename(null)}
-      sourceId={sourceToRename?.id ?? null}
-      sourceTitle={sourceToRename?.title ?? ""}
     />
     <ConfirmDeleteDialog
       open={!!sourceToDelete}

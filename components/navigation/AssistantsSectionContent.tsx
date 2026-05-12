@@ -13,13 +13,15 @@ import {
 } from "@/lib/api/assistants-api";
 import { queryKeys } from "@/lib/query-keys";
 import { AssistantItem } from "@/components/assistants/AssistantItem";
+import { AssistantLibraryCard } from "@/components/assistants/AssistantLibraryCard";
+import { AssistantPreviewModal } from "@/components/assistants/AssistantPreviewModal";
 import { useAssistantsUiStore } from "@/store/useAssistantsUiStore";
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import type { AssistantSummary } from "@/types/assistant";
 import { notifyErrorFromUnknown } from "@/lib/feedback";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
-import { Copy, Library } from "lucide-react";
+import { Copy, Eye, Library } from "lucide-react";
 
 export function AssistantsSectionContent() {
   const queryClient = useQueryClient();
@@ -44,6 +46,10 @@ export function AssistantsSectionContent() {
   }, []);
 
   const [deletingAssistant, setDeletingAssistant] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [previewAssistant, setPreviewAssistant] = useState<{
     id: string;
     name: string;
   } | null>(null);
@@ -166,30 +172,42 @@ export function AssistantsSectionContent() {
                       }
                     />
                   ) : (
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{assistant.name}</p>
-                        {assistant.description ? (
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {assistant.description}
-                          </p>
-                        ) : null}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="shrink-0 gap-1"
-                        disabled={
-                          cloneMutation.isPending &&
-                          cloneMutation.variables === assistant.id
-                        }
-                        onClick={() => cloneMutation.mutate(assistant.id)}
-                      >
-                        <Copy className="size-3.5" />
-                        Клонировать
-                      </Button>
-                    </div>
+                    <AssistantLibraryCard
+                      assistant={assistant}
+                      actions={
+                        <>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Просмотр «${assistant.name}»`}
+                            title="Просмотр"
+                            onClick={() =>
+                              setPreviewAssistant({
+                                id: assistant.id,
+                                name: assistant.name,
+                              })
+                            }
+                          >
+                            <Eye className="size-4 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="gap-1"
+                            disabled={
+                              cloneMutation.isPending &&
+                              cloneMutation.variables === assistant.id
+                            }
+                            onClick={() => cloneMutation.mutate(assistant.id)}
+                          >
+                            <Copy className="size-3.5 shrink-0" />
+                            Клонировать
+                          </Button>
+                        </>
+                      }
+                    />
                   )}
                 </li>
               ))}
@@ -197,6 +215,14 @@ export function AssistantsSectionContent() {
           </div>
         </ScrollArea>
       )}
+      <AssistantPreviewModal
+        open={Boolean(previewAssistant)}
+        onOpenChange={(open) => !open && setPreviewAssistant(null)}
+        assistantId={previewAssistant?.id ?? null}
+        fallbackName={previewAssistant?.name ?? ""}
+        onClone={(id) => cloneMutation.mutate(id)}
+        clonePending={cloneMutation.isPending}
+      />
       <ConfirmDeleteDialog
         open={Boolean(deletingAssistant)}
         onOpenChange={(open) => !open && setDeletingAssistant(null)}
