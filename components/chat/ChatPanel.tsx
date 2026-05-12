@@ -9,7 +9,13 @@ import {
   type ComponentProps,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { SendHorizontal, Square } from "lucide-react";
+import {
+  SendHorizontal,
+  Square,
+  Copy,
+  RotateCcw,
+  Check,
+} from "lucide-react";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { InlineSpinner } from "@/components/shared/InlineSpinner";
 import ReactMarkdown from "react-markdown";
@@ -17,6 +23,7 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatStore } from "@/store/useChatStore";
+import { useSourcesStore } from "@/store/useSourcesStore";
 import {
   getChat,
   sendMessage,
@@ -31,14 +38,14 @@ import { AssistantSelector } from "@/components/assistants/AssistantSelector";
 import { toast } from "sonner";
 import { ApiClientError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import { isStreamingMessageStatus } from "@/lib/chat-stream-status";
+import { consumeAssistantMessageStream } from "@/lib/assistant-message-stream";
 import type { ChatMessage } from "@/types/chat";
 
-const STREAMING_STATUSES = ["pending", "processing", "streaming"];
+const GENERATING_PLACEHOLDER_MIN_MS = 400;
 
 /** Stable empty array for store selector to avoid getSnapshot loop when chat has no messages */
 const EMPTY_MESSAGES: ChatMessage[] = [];
-
-const GENERATING_PLACEHOLDER_MIN_MS = 400;
 
 const EMPTY_PROMPTS = [
   "Объясни простыми словами",
@@ -47,14 +54,10 @@ const EMPTY_PROMPTS = [
 ];
 
 interface ChatPanelProps {
-  /** Id чата (например id папки или отдельный chatId). Если не передан, используется активный чат из стора. */
+  /** Id чата (REST `/chats/{id}`). Если не передан, используется активный чат из стора. */
   chatId?: string | null;
   /** Подпись для селектора ассистента, когда не выбран (например "Ассистент папки" в боковой панели папки). */
   assistantEmptyLabel?: string;
-}
-
-function isStreaming(status: string): boolean {
-  return STREAMING_STATUSES.includes(status);
 }
 
 const INPUT_MIN_ROWS = 2;
@@ -134,6 +137,7 @@ export function ChatPanel({
   const removeMessage = useChatStore((s) => s.removeMessage);
 
   const queryClient = useQueryClient();
+  const openAttachModal = useSourcesStore((s) => s.openAttachModal);
 
   const { data: chat } = useQuery({
     queryKey: queryKeys.chat(currentChatId ?? ""),
@@ -168,7 +172,8 @@ export function ChatPanel({
 
   const lastMessage = messages[messages.length - 1];
   const streaming =
-    lastMessage?.role === "assistant" && isStreaming(lastMessage.status);
+    lastMessage?.role === "assistant" &&
+    isStreamingMessageStatus(lastMessage.status);
   const assistantMessageId =
     lastMessage?.role === "assistant" ? lastMessage.id : null;
 
@@ -194,7 +199,8 @@ export function ChatPanel({
 
       const msgs = useChatStore.getState().chats[cid] ?? [];
       const last = msgs[msgs.length - 1];
-      if (last?.role === "assistant" && isStreaming(last.status)) return;
+      if (last?.role === "assistant" && isStreamingMessageStatus(last.status))
+        return;
 
       setSending(true);
       setSendError(null);
@@ -223,45 +229,40 @@ export function ChatPanel({
         let currentAssistantId = tempAssistantId;
 
         try {
-          for await (const event of getMessageResponseStream(
-            cid,
-            userMessageId,
-            controller.signal
-          )) {
-            if (event.state === "start") {
-              const newId =
-                typeof event.message_id === "string"
-                  ? event.message_id
-                  : String(event.message_id);
-              updateMessage(cid, tempAssistantId, {
-                id: newId,
-                status: event.status || "streaming",
-              });
-              currentAssistantId = newId;
-              continue;
+          await consumeAssistantMessageStream(
+            getMessageResponseStream(
+              cid,
+              userMessageId,
+              controller.signal
+            ),
+            {
+              onStart: (newId, status) => {
+                updateMessage(cid, tempAssistantId, {
+                  id: newId,
+                  status: status || "streaming",
+                });
+                currentAssistantId = newId;
+              },
+              onDelta: (chunk, status) => {
+                accumulated += chunk;
+                updateMessage(cid, currentAssistantId, {
+                  content: accumulated,
+                  status: status || "streaming",
+                });
+              },
+              onEnd: () => {
+                updateMessage(cid, currentAssistantId, {
+                  status: "completed",
+                });
+              },
+              onError: (errContent) => {
+                updateMessage(cid, currentAssistantId, {
+                  status: "failed",
+                  content: errContent,
+                });
+              },
             }
-            if (event.state === "delta") {
-              accumulated += event.content;
-              updateMessage(cid, currentAssistantId, {
-                content: accumulated,
-                status: event.status || "streaming",
-              });
-              continue;
-            }
-            if (event.state === "end") {
-              updateMessage(cid, currentAssistantId, {
-                status: "completed",
-              });
-              break;
-            }
-            if (event.state === "error") {
-              updateMessage(cid, currentAssistantId, {
-                status: "failed",
-                content: event.content || "Ошибка генерации",
-              });
-              break;
-            }
-          }
+          );
         } catch (err) {
           if ((err as Error).name === "AbortError") {
             updateMessage(cid, currentAssistantId, {
@@ -340,6 +341,27 @@ export function ChatPanel({
         aria-live="polite"
         aria-label="Сообщения чата"
       >
+        {currentChatId && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/50 bg-muted/20 px-3 py-2 text-xs">
+            <span className="text-muted-foreground">
+              Источники в чате:{" "}
+              <span className="font-medium text-foreground">
+                {chat?.sources?.length ?? 0}
+              </span>
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() =>
+                openAttachModal({ type: "chat", id: currentChatId })
+              }
+            >
+              Управлять
+            </Button>
+          </div>
+        )}
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col gap-4 p-4">
             {messages.length === 0 ? (
@@ -453,20 +475,59 @@ interface ChatMessageBlockProps {
   message: ChatMessage;
 }
 
+function buildMessageCopyText(message: ChatMessage): string {
+  const body = (message.content ?? "").trim();
+  if (message.attachments.length === 0) return body;
+  const names = message.attachments.map((a) => a.name).join(", ");
+  if (!body) return `Вложения: ${names}`;
+  return `${body}\n\nВложения: ${names}`;
+}
+
 function ChatMessageBlock({ message }: ChatMessageBlockProps) {
   const isUser = message.role === "user";
   const isGenerating =
     message.role === "assistant" &&
-    (message.status === "pending" ||
-      message.status === "processing" ||
-      message.status === "streaming");
-  const isStreaming =
+    isStreamingMessageStatus(message.status);
+  const isStreamingDelta =
     message.role === "assistant" && message.status === "streaming";
   const isFailed = message.status === "failed";
   const isCancelled = message.status === "cancelled";
+  const showMessageActions =
+    message.status === "completed" &&
+    !isFailed &&
+    !isCancelled &&
+    (Boolean(message.content) || message.attachments.length > 0);
 
   const generatingStartedAtRef = useRef<number | null>(null);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [copyDone, setCopyDone] = useState(false);
+  const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+    };
+  }, []);
+
+  const handleCopyMessage = useCallback(async () => {
+    const text = buildMessageCopyText(message);
+    if (!text) {
+      toast.error("Нечего копировать");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Текст скопирован");
+      setCopyDone(true);
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+      copyResetRef.current = setTimeout(() => {
+        copyResetRef.current = null;
+        setCopyDone(false);
+      }, 2000);
+    } catch {
+      toast.error("Не удалось скопировать");
+    }
+  }, [message]);
 
   useEffect(() => {
     if (isGenerating) {
@@ -489,22 +550,32 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
   return (
     <div
       className={cn(
-        "flex flex-col rounded-lg border text-sm max-w-[85%] overflow-hidden",
+        "group/msg flex flex-col rounded-lg border text-sm max-w-[85%] overflow-hidden shadow-sm transition-[box-shadow,border-color,transform] duration-200 hover:border-border/55 hover:shadow-md",
         isUser
           ? "ml-auto border-border/60 bg-primary/10 text-foreground"
-          : "mr-auto border-border/40 bg-muted/50 text-foreground"
+          : "mr-auto border-border/30 bg-muted/25 text-foreground"
       )}
     >
-      <div className="shrink-0 border-b border-border/50 px-3 py-1.5 bg-muted/30">
+      <div
+        className={cn(
+          "shrink-0 border-b border-border/50 px-3 py-1.5",
+          isUser ? "bg-muted/25" : "bg-muted/15"
+        )}
+      >
         <span className="text-xs font-medium text-muted-foreground">
           {isUser ? "Вы" : "Ассистент"}
         </span>
       </div>
-      <div className="px-3 py-2 prose prose-sm dark:prose-invert max-w-none wrap-break-word">
+      <div
+        className={cn(
+          "px-3 py-2 prose prose-sm dark:prose-invert max-w-none wrap-break-word",
+          !isUser && "prose-headings:font-medium prose-p:leading-relaxed"
+        )}
+      >
         {showPlaceholder && (
           <span className="text-muted-foreground animate-pulse">Думаю…</span>
         )}
-        {!showPlaceholder && isStreaming && message.content && (
+        {!showPlaceholder && isStreamingDelta && message.content && (
           <>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
@@ -530,6 +601,52 @@ function ChatMessageBlock({ message }: ChatMessageBlockProps) {
           ))}
         {isCancelled && message.content && <>{message.content}</>}
       </div>
+      {message.attachments.length > 0 && (
+        <div className="shrink-0 border-t border-border/40 bg-muted/10 px-3 py-2">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">
+            Вложения
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {message.attachments.map((a) => (
+              <li
+                key={`${a.content_id}-${a.name}`}
+                className="rounded-md border border-border/50 bg-background/80 px-2 py-0.5 text-xs text-foreground/90"
+              >
+                {a.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {showMessageActions && (
+        <div className="flex shrink-0 flex-wrap gap-1 border-t border-border/40 bg-muted/10 px-2 py-1.5 opacity-90 transition-opacity group-hover/msg:opacity-100">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => void handleCopyMessage()}
+            aria-label="Копировать текст сообщения"
+          >
+            <Copy className="size-3.5 shrink-0" />
+            {copyDone ? "Скопировано" : "Копировать"}
+          </Button>
+          {!isUser && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              disabled
+              title="Скоро"
+              aria-label="Повторить ответ — скоро"
+            >
+              <RotateCcw className="size-3.5 shrink-0" />
+              Ещё раз
+            </Button>
+          )}
+        </div>
+      )}
       {(isFailed || isCancelled) && (
         <div className="shrink-0 border-t border-border/50 px-3 py-1.5 bg-muted/20">
           <span

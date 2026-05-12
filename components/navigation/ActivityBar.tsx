@@ -19,9 +19,9 @@ import { useNavigationStore, type ActivitySection } from "@/store/useNavigationS
 
 const TOP_SECTIONS: { id: ActivitySection; label: string; icon: typeof FileStack }[] = [
   { id: "files", label: "Файлы", icon: FileStack },
-  { id: "search", label: "Поиск", icon: Search },
+  { id: "search", label: "Вопрос с дашборда", icon: Search },
   { id: "assistants", label: "Библиотека ассистентов", icon: Library },
-  { id: "sources", label: "Источники", icon: Database },
+  { id: "sources", label: "Все источники", icon: Database },
 ]
 
 function ActivityBarButton({

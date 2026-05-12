@@ -4,7 +4,14 @@ import { InlineSuggestionExtension } from "./inline-suggestion-extension";
 import Placeholder from "@tiptap/extension-placeholder";
 import type { Node } from "@tiptap/pm/model";
 
-export function createEditorExtensions() {
+export interface EditorExtensionsOptions {
+  folderId?: string | null;
+}
+
+export function createEditorExtensions(
+  options: EditorExtensionsOptions = {}
+) {
+  const folderId = options.folderId ?? null;
   return [
     StarterKit,
     Placeholder.configure({
@@ -20,6 +27,6 @@ export function createEditorExtensions() {
     Markdown.configure({
       markedOptions: { gfm: true },
     }),
-    InlineSuggestionExtension,
+    InlineSuggestionExtension.configure({ folderId }),
   ];
 }

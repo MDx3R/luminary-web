@@ -16,6 +16,8 @@ export interface TiptapEditorProps {
   getBubbleMenuCallbacks: (editor: Editor) => EditorBubbleMenuCallbacks;
   /** When true, bubble shows a compact loader instead of actions (inline AI stream). */
   bubbleInlineAiBusy?: boolean;
+  /** Папка для автодополнения; при смене редактор пересоздаётся по key. */
+  folderId?: string | null;
 }
 
 const CONTENT_CHANGE_DEBOUNCE_MS = 500;
@@ -25,6 +27,7 @@ export function TiptapEditor({
   onContentChange,
   getBubbleMenuCallbacks,
   bubbleInlineAiBusy = false,
+  folderId = null,
 }: TiptapEditorProps) {
   const onContentChangeRef = useRef(onContentChange);
   useEffect(() => {
@@ -33,7 +36,7 @@ export function TiptapEditor({
 
   const editor = useEditor(
     {
-      extensions: createEditorExtensions(),
+      extensions: createEditorExtensions({ folderId }),
       content:
         initialContent !== undefined && initialContent !== ""
           ? initialContent
@@ -42,7 +45,7 @@ export function TiptapEditor({
       immediatelyRender: false,
       editorProps: {
         attributes: {
-          class: "prose-editor min-h-[280px] w-full max-w-none outline-none",
+          class: "prose-editor min-h-[280px] w-full outline-none",
         },
       },
     },

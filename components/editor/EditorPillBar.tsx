@@ -132,7 +132,7 @@ export function EditorPillBar() {
           disabled={!exportContent}
         >
           <FileDown className="size-4" />
-          Export
+          Экспорт
         </Button>
         <Button
           variant="ghost"
@@ -159,7 +159,7 @@ export function EditorPillBar() {
           aria-label="Источники"
         >
           <BookMarked className="size-4" />
-          Sources
+          Источники
         </Button>
       </div>
     </div>

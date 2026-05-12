@@ -7,9 +7,12 @@ import { BookMarked, FileUp, Link as LinkIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
+  appModalDialogContentClassName,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -271,12 +274,15 @@ export function AttachSourceModal() {
   if (step === "upload") {
     return (
       <Dialog open={addSourceModalOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
+        <DialogContent className={cn(appModalDialogContentClassName)}>
           <DialogHeader className="p-5 pb-0">
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
               <FileUp className="size-5 shrink-0 text-muted-foreground" />
               Загрузить новый источник
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Создание файла или ссылки и привязка к папке или чату.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 p-5">
             {uploadKind === "choose" && (
@@ -394,12 +400,15 @@ export function AttachSourceModal() {
   return (
     <>
     <Dialog open={addSourceModalOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
+      <DialogContent className={cn(appModalDialogContentClassName)}>
         <DialogHeader className="p-5 pb-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
             <BookMarked className="size-5 shrink-0 text-muted-foreground" />
             {title}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Выбор существующего источника из библиотеки для привязки к папке или чату.
+          </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col items-center p-5 pt-4">

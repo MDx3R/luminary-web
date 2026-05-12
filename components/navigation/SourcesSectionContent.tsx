@@ -21,6 +21,9 @@ export function SourcesSectionContent() {
 
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+      <p className="px-2 pt-1 text-xs font-medium text-muted-foreground">
+        Все источники в аккаунте
+      </p>
       {sources.length === 0 ? (
         <p className="px-2 py-2 text-xs text-muted-foreground">
           Нет источников. Добавьте источник кнопкой выше или через папку/чат.

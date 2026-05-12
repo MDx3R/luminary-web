@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -75,6 +76,9 @@ export function RenameSourceDialog({
       <DialogContent className="sm:max-w-sm" showCloseButton={true}>
         <DialogHeader>
           <DialogTitle>Переименовать источник</DialogTitle>
+          <DialogDescription className="sr-only">
+            Изменение названия записи в каталоге источников.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           {error && (

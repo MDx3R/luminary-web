@@ -106,7 +106,7 @@ export function EditorPanel() {
   const getBubbleMenuCallbacks = useCallback(
     (editor: Editor): EditorBubbleMenuCallbacks => {
       const run = async (instruction: string) => {
-        const fid = useFolderStore.getState().currentFolder?.id;
+        const fid = folderId;
         if (!fid) {
           toast.error("Откройте папку с документом.");
           return;
@@ -170,7 +170,7 @@ export function EditorPanel() {
         },
       };
     },
-    []
+    [folderId]
   );
 
   return (
@@ -181,6 +181,7 @@ export function EditorPanel() {
           <div className="w-full max-w-[720px] min-w-0">
             <TiptapEditor
               key={folderId || "empty"}
+              folderId={folderId || null}
               initialContent={initialContent}
               onContentChange={onContentChange}
               getBubbleMenuCallbacks={getBubbleMenuCallbacks}

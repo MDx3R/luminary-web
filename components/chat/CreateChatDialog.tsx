@@ -6,10 +6,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  appModalDialogContentClassName,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MessageSquarePlus } from "lucide-react";
@@ -61,7 +64,9 @@ export function CreateChatDialog({
       setError(null);
       if (data?.id) {
         onSuccess?.(data.id);
-        if (!folderId) {
+        if (folderId) {
+          router.push(`/folder/${folderId}?chat=${data.id}`);
+        } else {
           router.push(`/chat/${data.id}`);
         }
       }
@@ -93,12 +98,17 @@ export function CreateChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
+      <DialogContent className={cn(appModalDialogContentClassName)}>
         <DialogHeader className="p-5 pb-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
             <MessageSquarePlus className="size-5 shrink-0 text-muted-foreground" />
             {isFolderChat ? "Новый чат в папке" : "Новый чат"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isFolderChat
+              ? "Создание чата внутри текущей папки с общими источниками."
+              : "Создание отдельного чата без привязки к папке."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-5">
           {error && (

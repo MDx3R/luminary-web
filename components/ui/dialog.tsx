@@ -73,7 +73,7 @@ function DialogContent({
               }
             >
               <XIcon />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">Закрыть</span>
             </DialogPrimitive.Close>
           )}
         </DialogPrimitive.Popup>
@@ -127,6 +127,10 @@ function DialogDescription({
     />
   );
 }
+
+/** Общий каркас модалок с формой и прокручиваемым телом (см. components/ui/README.md). */
+export const appModalDialogContentClassName =
+  "sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl";
 
 export {
   Dialog,

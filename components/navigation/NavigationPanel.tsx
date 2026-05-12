@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Accordion,
@@ -13,7 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { CreateFolderDialog } from "@/components/folder/CreateFolderDialog";
 import { CreateChatDialog } from "@/components/chat/CreateChatDialog";
 import { useNavigationStore } from "@/store/useNavigationStore";
@@ -68,17 +70,6 @@ function FilesSectionContent() {
           </AccordionItem>
         </Accordion>
       </ScrollArea>
-    </div>
-  );
-}
-
-function PlaceholderSection({ title }: { title: string }) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-      <p className="text-sm text-muted-foreground">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground/80">
-        Скоро будет доступно
-      </p>
     </div>
   );
 }
@@ -209,7 +200,21 @@ export function NavigationPanel() {
       </div>
       {activeSection === "files" && <FilesSectionContent />}
       {activeSection === "search" && (
-        <PlaceholderSection title="Поиск по базе знаний" />
+        <div className="flex flex-1 flex-col gap-3 p-4">
+          <p className="text-sm text-muted-foreground">
+            Быстрый ввод вопроса — на дашборде в поле внизу экрана. Откроется новый
+            автономный чат с вашим запросом.
+          </p>
+          <Link
+            href="/dashboard"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "w-full shrink-0 justify-center no-underline"
+            )}
+          >
+            Открыть дашборд
+          </Link>
+        </div>
       )}
       {activeSection === "assistants" && <AssistantsSectionContent />}
       {activeSection === "sources" && <SourcesSectionContent />}

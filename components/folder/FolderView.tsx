@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ResizablePanelGroup,
@@ -18,6 +18,8 @@ import { queryKeys } from "@/lib/query-keys";
 import { useHydrateChatMessages } from "@/hooks/useHydrateChatMessages";
 import { useMinimumPending } from "@/hooks/useMinimumPending";
 import { ListLoadingRow } from "@/components/shared/ListLoadingRow";
+import { CreateChatDialog } from "@/components/chat/CreateChatDialog";
+import { Button } from "@/components/ui/button";
 
 const CHAT_PANEL_MIN = "25%";
 const CHAT_PANEL_MAX = "35%";
@@ -29,6 +31,7 @@ interface FolderViewProps {
 export function FolderView({ folderId }: FolderViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [createChatOpen, setCreateChatOpen] = useState(false);
   const setFolder = useFolderStore((s) => s.setFolder);
   const clearFolder = useFolderStore((s) => s.clearFolder);
   const selectedChatId = useFolderStore((s) => s.selectedChatId);
@@ -67,27 +70,19 @@ export function FolderView({ folderId }: FolderViewProps) {
 
   useHydrateChatMessages(effectiveChatId, messages);
 
-  // Sync URL with first chat when panel is open and URL has no chat param
+  // Синхронизация URL с активным чатом, чтобы закладки и «Назад» отражали выбранный чат
   useEffect(() => {
     if (
       folder &&
       (folder.chats?.length ?? 0) > 0 &&
       !chatFromUrl &&
-      effectiveChatId &&
-      !chatPanelCollapsed
+      effectiveChatId
     ) {
       router.replace(`/folder/${folderId}?chat=${effectiveChatId}`, {
         scroll: false,
       });
     }
-  }, [
-    folder,
-    folderId,
-    chatFromUrl,
-    effectiveChatId,
-    chatPanelCollapsed,
-    router,
-  ]);
+  }, [folder, folderId, chatFromUrl, effectiveChatId, router]);
 
   if (showFolderLoading) {
     return (
@@ -106,9 +101,36 @@ export function FolderView({ folderId }: FolderViewProps) {
   }
 
   const hasChats = (folder.chats?.length ?? 0) > 0;
-  const showEditorOnly = !hasChats || chatPanelCollapsed;
 
-  if (showEditorOnly) {
+  if (!hasChats) {
+    return (
+      <>
+        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="shrink-0 border-b border-border bg-muted/25 px-4 py-3">
+            <p className="mb-2 text-sm text-muted-foreground">
+              В этой папке пока нет чатов. Создайте чат, чтобы обсуждать источники и
+              переносить выводы в документ.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setCreateChatOpen(true)}
+            >
+              Новый чат в папке
+            </Button>
+          </div>
+          <EditorPanel />
+        </div>
+        <CreateChatDialog
+          open={createChatOpen}
+          onOpenChange={setCreateChatOpen}
+          folderId={folderId}
+        />
+      </>
+    );
+  }
+
+  if (chatPanelCollapsed) {
     return (
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
         <EditorPanel />

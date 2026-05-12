@@ -5,10 +5,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  appModalDialogContentClassName,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Bot } from "lucide-react";
@@ -82,12 +85,15 @@ export function CreateAssistantModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
+      <DialogContent className={cn(appModalDialogContentClassName)}>
         <DialogHeader className="p-5 pb-0">
           <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
             <Bot className="size-5 shrink-0 text-muted-foreground" />
             Новый ассистент
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Создание персонального ассистента с инструкциями.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 p-5">
           {error && (

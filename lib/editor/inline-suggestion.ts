@@ -12,10 +12,12 @@ export interface InlineSuggestionContext {
  */
 export async function getInlineSuggestion(
   context: InlineSuggestionContext,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  folderId?: string
 ): Promise<string | null> {
-  const folderId = useFolderStore.getState().currentFolder?.id;
-  if (!folderId) return null;
+  const resolvedFolderId =
+    folderId ?? useFolderStore.getState().currentFolder?.id;
+  if (!resolvedFolderId) return null;
   if (
     context.textBeforeCursor.length === 0 &&
     context.textAfterCursor.length === 0
@@ -25,7 +27,7 @@ export async function getInlineSuggestion(
   try {
     return collectAutocompleteSuggestion(
       streamFolderEditorAutocomplete(
-        folderId,
+        resolvedFolderId,
         {
           text_before_cursor: context.textBeforeCursor,
           text_after_cursor: context.textAfterCursor,

@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -70,7 +71,11 @@ export function SourcesPanel() {
     <Sheet open={sourcesPanelOpen} onOpenChange={setSourcesPanelOpen}>
       <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Источники</SheetTitle>
+          <SheetTitle>Источники папки</SheetTitle>
+          <SheetDescription>
+            Файлы и ссылки, доступные чатам этой папки. Глобальный каталог — в
+            боковой панели «Все источники».
+          </SheetDescription>
         </SheetHeader>
         <div className="flex flex-1 flex-col gap-3 overflow-hidden px-4">
           <Button

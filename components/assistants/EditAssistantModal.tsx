@@ -5,10 +5,13 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  appModalDialogContentClassName,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Bot, Trash2 } from "lucide-react";
@@ -136,12 +139,15 @@ export function EditAssistantModal({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-sm max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden rounded-xl">
+        <DialogContent className={cn(appModalDialogContentClassName)}>
           <DialogHeader className="p-5 pb-0">
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
               <Bot className="size-5 shrink-0 text-muted-foreground" />
               Редактировать ассистента
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Изменение параметров и инструкций ассистента.
+            </DialogDescription>
           </DialogHeader>
           {showAssistantLoading ? (
             <div className="p-5">

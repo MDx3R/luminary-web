@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -29,6 +29,8 @@ import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
 import { listFolders, getFolder, deleteFolder, removeChatFromFolder } from "@/lib/api/folders-api";
 import { queryKeys } from "@/lib/query-keys";
 import { CreateChatDialog } from "@/components/chat/CreateChatDialog";
+import { CreateFolderDialog } from "@/components/folder/CreateFolderDialog";
+import { Button } from "@/components/ui/button";
 import { RenameFolderDialog } from "@/components/folder/RenameFolderDialog";
 import { RenameChatDialog } from "@/components/chat/RenameChatDialog";
 import { ApiClientError } from "@/lib/api-client";
@@ -59,6 +61,7 @@ function FolderRow({
   onRenameChatInFolder: (folderId: string, chatId: string, chatName: string) => void;
   onRemoveChatFromFolder: (folderId: string, chatId: string, chatName: string) => void;
 }) {
+  const chatsRegionId = useId();
   const { data: folderDetails } = useQuery({
     queryKey: queryKeys.folder(folder.id),
     queryFn: () => getFolder(folder.id),
@@ -78,6 +81,8 @@ function FolderRow({
         <button
           type="button"
           onClick={onToggle}
+          aria-expanded={isExpanded}
+          aria-controls={chatsRegionId}
           className="flex flex-1 items-center gap-1.5 overflow-hidden text-left outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
         >
           <ChevronRight
@@ -139,7 +144,13 @@ function FolderRow({
           </DropdownMenu>
         </div>
       </div>
-      {isExpanded && (
+      <div
+        id={chatsRegionId}
+        role="region"
+        aria-label={`Содержимое папки ${folder.name}`}
+        hidden={!isExpanded}
+      >
+        {isExpanded && (
         <div className="ml-4 border-l border-sidebar-border pl-2">
           <div className="group/chat flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
             <Link
@@ -147,7 +158,7 @@ function FolderRow({
               className="flex min-w-0 flex-1 items-center gap-2"
             >
               <FileText className="size-3.5 shrink-0 text-muted-foreground" />
-              <span className="truncate">Editor.md</span>
+              <span className="truncate">Редактор папки</span>
             </Link>
           </div>
           {chats.map((chat) => (
@@ -176,6 +187,7 @@ function FolderRow({
               <DropdownMenu>
                 <DropdownMenuTrigger
                   className="inline-flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/chat:opacity-100 hover:bg-sidebar-accent"
+                  aria-label="Меню чата"
                   onClick={(e) => e.preventDefault()}
                 >
                   <MoreHorizontal className="size-3.5" />
@@ -202,7 +214,8 @@ function FolderRow({
             </div>
           ))}
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -221,6 +234,7 @@ export function FoldersTree() {
   const [createChatFolderId, setCreateChatFolderId] = useState<string | null>(
     null
   );
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<FolderSummary | null>(null);
   const [folderToRename, setFolderToRename] = useState<FolderSummary | null>(null);
   const [chatToRenameInFolder, setChatToRenameInFolder] = useState<{
@@ -333,22 +347,43 @@ export function FoldersTree() {
 
   return (
     <>
+      <CreateFolderDialog
+        open={createFolderOpen}
+        onOpenChange={setCreateFolderOpen}
+      />
       <div className="flex flex-col gap-0.5 py-1">
-        {folders.map((folder) => (
-          <FolderRow
-            key={folder.id}
-            folder={folder}
-            isExpanded={expandedFolderIds.includes(folder.id)}
-            onToggle={() => toggleFolderExpanded(folder.id)}
-            onAddChat={() => handleAddChat(folder)}
-            onAddSource={() => handleAddSource(folder)}
-            onAddSourceToChat={handleAddSourceToChat}
-            onDeleteFolder={handleDeleteFolder}
-            onRenameFolder={handleRenameFolder}
-            onRenameChatInFolder={handleRenameChatInFolder}
-            onRemoveChatFromFolder={handleRemoveChatFromFolder}
-          />
-        ))}
+        {folders.length === 0 ? (
+          <div className="flex flex-col gap-2 px-2 py-3">
+            <p className="text-xs text-muted-foreground">
+              Пока нет папок. Создайте папку — в ней будут документ, чаты и источники.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full justify-center"
+              onClick={() => setCreateFolderOpen(true)}
+            >
+              Новая папка
+            </Button>
+          </div>
+        ) : (
+          folders.map((folder) => (
+            <FolderRow
+              key={folder.id}
+              folder={folder}
+              isExpanded={expandedFolderIds.includes(folder.id)}
+              onToggle={() => toggleFolderExpanded(folder.id)}
+              onAddChat={() => handleAddChat(folder)}
+              onAddSource={() => handleAddSource(folder)}
+              onAddSourceToChat={handleAddSourceToChat}
+              onDeleteFolder={handleDeleteFolder}
+              onRenameFolder={handleRenameFolder}
+              onRenameChatInFolder={handleRenameChatInFolder}
+              onRemoveChatFromFolder={handleRemoveChatFromFolder}
+            />
+          ))
+        )}
       </div>
       <CreateChatDialog
         open={createChatOpen}
